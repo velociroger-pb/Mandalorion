@@ -62,5 +62,9 @@ Tweakable parameters:
 -S  If given, Mandalorion will use this file instead of performing its own minimap2 alignment. Careful! If names don't line up between this sam file and the fasta and fastq files everything breaks!
 ```
 
+## Outputs ##
+
+I consider the *Isoform_Consensi_filtered.fasta* file the main output of the Mandalorion pipeline. It contains the polished sequences of all isoforms Mandalorion considers very high confidence. Mandalorion also creates an *Isoform_Consensi_filtered.aligned.out.clean.psl* which contains alignments of those sequences that had small indels removed. This file is easy to upload to the UCSC Genome Browser to inspect. This version of Mandalorion now also generates a *quantifiedIsoforms.txt' file which contains the number of R2C2 reads that associate which each isoform for each given fasta files.
+
 ## Utils ##
 These are the scripts used to do haplotype phasing and HLA analysis.
