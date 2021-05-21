@@ -9,17 +9,22 @@ Takes R2C2/C3POa data and defines high confidence isoforms.
 ## Dependencies ##
 
 - [minimap2](https://github.com/lh3/minimap2)
+
 - [racon](https://github.com/isovic/racon)
 - [emtrey](https://github.com/rvolden/emtrey) ([go](https://golang.org/dl/))
 - [blat source](https://users.soe.ucsc.edu/~kent/src/blatSrc35.zip) or [blat executable](http://hgdownload.soe.ucsc.edu/admin/exe/)
 - [medaka](https://github.com/nanoporetech/medaka)
-- [abPOA](https://github.com/yangao07/abPOA)
 
 The paths to these will need to be put into your config file [like this.](example_config) If you have the program installed or in your path already, replace the path with the name of the program.
 
+- [mappy](https://pypi.org/project/mappy/)
+- [pyabPOA](https://pypi.org/project/pyabpoa/)
+
+After installation with pip3 these should just work
+
 ## Usage ##
 ```bash
-python3 Mandalorion.py [OPTIONS]
+python3 Mando.py [OPTIONS]
 ```
 
 Running with default settings:
@@ -34,9 +39,11 @@ Required options:
 -g  annotation file (gtf)
 -G  genome file (fasta)
 -a  adapter file (fasta)
--f  R2C2 read file (fasta, can be comma separated list)
--b  R2C2 subread file (fastq, can be comma separated list)
+-f  R2C2 read file (fasta, can be comma separated list or a file of file names with one fasta file location per line. File of file names has to contain '.fofn' )
+-b  R2C2 subread file (fastq, can be comma separated list or a file of file names with one fastq file location per line. File of file names has to contain '.fofn')
 ```
+'.fofn' implementation super janky so if you want to just give a fastx file or comma separate list those cannot contain '.fofn' in their name
+
 
 Tweakable parameters:
 ```
@@ -53,7 +60,8 @@ Tweakable parameters:
 -n  minimum feature count (number of reads, default 2)
 -w  splice site window (default 1)
 -A  A proportion cutoff - isoforms with A content within a 30 nt window around the polyA higher than this will be discarded (default 0.5)
+-S  If given, Mandalorion will use this file instead of performing its own minimap2 alignment. Careful! If names don't line up between this sam file and the fasta and fastq files everything breaks!
 ```
 
 ## Utils ##
-These are the scripts used in the paper to do haplotype phasing and HLA analysis.
+These are the scripts used to do haplotype phasing and HLA analysis.
