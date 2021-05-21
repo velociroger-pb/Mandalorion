@@ -2,7 +2,7 @@
 [![Github release](https://img.shields.io/github/tag/rvolden/Mandalorion.svg?label=Version)](https://github.com/rvolden/Mandalorion/tags)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
-Episode III.6: I can bring you in warm, or I can bring you in cold.
+Episode III.6: I can bring you in warm or I can bring you in cold.
 
 Takes R2C2/C3POa data and defines high confidence isoforms.
 
