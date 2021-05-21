@@ -53,7 +53,7 @@ Tweakable parameters:
 -i  minimum internal ratio (default 1)
 -R  minimum number of reads for an isoform (default 5)
 -O  overhangs, defines bounds for unaligned bases on ends, format: min5',max5',min3',max3' (default 0,40,0,40)
--t  number of threads to use for minimap2 (default 4)
+-t  number of threads to use for minimap2 and consensus determination (default 4)
 -e  ends, the ends of your sequences, format: 5prime,3prime (default 'ATGGG,AAAAA')
 -I  minimum isoform length (default 500)
 -n  minimum feature count (number of reads, default 2)
