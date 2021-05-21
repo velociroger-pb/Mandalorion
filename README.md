@@ -9,7 +9,6 @@ Takes R2C2/C3POa data and defines high confidence isoforms.
 ## Dependencies ##
 
 - [minimap2](https://github.com/lh3/minimap2)
-
 - [racon](https://github.com/isovic/racon)
 - [emtrey](https://github.com/rvolden/emtrey) ([go](https://golang.org/dl/))
 - [blat source](https://users.soe.ucsc.edu/~kent/src/blatSrc35.zip) or [blat executable](http://hgdownload.soe.ucsc.edu/admin/exe/)
@@ -29,7 +28,7 @@ python3 Mando.py [OPTIONS]
 
 Running with default settings:
 ```bash
-python3 Mandalorion.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -a adapters.fasta -f R2C2_consensi.fasta -b R2C2_subreads.fastq
+python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -a adapters.fasta -f R2C2_consensi.fasta -b R2C2_subreads.fastq
 ```
 
 Required options:
@@ -42,7 +41,7 @@ Required options:
 -f  R2C2 read file (fasta, can be comma separated list or a file of file names with one fasta file location per line. File of file names has to contain '.fofn' )
 -b  R2C2 subread file (fastq, can be comma separated list or a file of file names with one fastq file location per line. File of file names has to contain '.fofn')
 ```
-'.fofn' implementation super janky so if you want to just give a fastx file or comma separate list those cannot contain '.fofn' in their name
+'.fofn' implementation is super janky so if you want to just give a fastx file or comma separate list those cannot contain '.fofn' in their name
 
 
 Tweakable parameters:
