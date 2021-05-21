@@ -6,7 +6,9 @@ import sys
 import os
 import argparse
 
-VERSION = 'v3.5.0'
+
+
+VERSION = 'v3.6.0 - I can bring you in warm, or I can bring you in cold.'
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -94,6 +96,11 @@ parser.add_argument(
             window surrounding their polyA site will be discarded (default 0.5)'''
 )
 parser.add_argument(
+    '-S', '--sam_file', type=str, default=False,
+    help='''If given, Mandalorion will use this file instead of performing its own minimap2 alignment. 
+            Careful! If names don't line up between this and the fasta and fastq files everything breaks!'''
+)
+parser.add_argument(
     '-v', '--version', action='version', version=VERSION,
     help='Prints Mandalorion version'
 )
@@ -123,6 +130,16 @@ minimum_isoform_length = args.minimum_isoform_length
 window = args.splice_site_window
 feature_count = args.minimum_feature_count
 Acutoff = args.Acutoff
+sam_file=args.sam_file
+
+
+if '.fofn' in fasta_files:
+    fastaList=[]
+    for line in open(fasta_files):
+        fasta=line.strip()
+        fastaList.append(fasta)
+else:
+    fastaList=fasta_files.split(',')
 
 if not os.path.isdir(path):
     os.system('mkdir %s' % path)
@@ -162,19 +179,30 @@ consensus = progs['consensus']
 emtrey = progs['emtrey']
 consensus = 'python3 ' + consensus
 
-print('Aligning reads')
-fasta_string = (' ').join(fasta_files.split(','))
-sam_file = path + '/mm2Alignments.sam'
+if not sam_file:
+    print('Aligning reads')
+    sam_file = path + '/mm2Alignments.sam'
+    tempFasta=path+'/Combined.fasta'
+    out=open(tempFasta,'w')
+    for fasta in fastaList:
+        for line in open(fasta):
+            out.write(line)
+    out.close()
+#    print(
+#        '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
+#        % (minimap2, minimap2_threads, genome_sequence, fasta_string, sam_file)
+#    )
+    os.system(
+        '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
+        % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
+    )
+
+else:
+    print('sam file provided. Using those alignments instead of aligning the reads in fasta file(s)')
+
+
 psl_file = path + '/mm2Alignments.psl'
 clean_psl_file = path + '/mm2Alignments.clean.psl'
-print(
-    '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
-    % (minimap2, minimap2_threads, genome_sequence, fasta_string, sam_file)
-)
-os.system(
-    '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
-    % (minimap2, minimap2_threads, genome_sequence, fasta_string, sam_file)
-)
 print('Converting sam output to psl format')
 os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
 print('Cleaning psl file of small Indels')
@@ -198,7 +226,7 @@ print('Identifying Isoforms')
 # The two number variables determine the window around TSS and TES
 # in which read ends can fall and still be matched to the site.
 os.system(
-    'python3 defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s'
+    'python3 defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
     % (
         clean_psl_file,
         path,
@@ -207,12 +235,15 @@ os.system(
         subreads,
         fasta_files,
         feature_count,
+        minimum_reads
     )
 )
+print('Generating Isoform Consensus Sequences')
 os.system(
     'python3 createConsensi.py -p %s -s %s -c %s -n %s'
     % (path, subsample_consensus, config_file, minimap2_threads)
 )
+print('Filtering Isoforms')
 os.system(
     'python3 filterIsoforms.py \
         -p %s -i %s -r %s -R %s -n %s -a %s -G %s -c %s \
@@ -235,4 +266,9 @@ os.system(
         minimum_isoform_length,
         path + '/filter_reasons.txt',
     )
+)
+print('Quantifying Isoforms')
+os.system(
+    'python3 assignReadsToIsoforms.py -m %s -f %s'
+    % (path, fasta_files)
 )

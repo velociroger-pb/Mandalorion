@@ -7,5 +7,3 @@ racon	~/racon/bin/racon
 minimap2	~/minimap2/minimap2
 blat	~/blat/blat
 emtrey	~/emtrey/emtrey
-consensus	consensus.py
-poa	abpoa

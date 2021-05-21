@@ -5,6 +5,8 @@
 import os
 import sys
 import numpy as np
+import mappy as mp
+
 
 path = sys.argv[2]
 infile = sys.argv[1]
@@ -13,6 +15,24 @@ downstream_buffer = int(sys.argv[3])
 subreads = sys.argv[5]
 fasta_files = sys.argv[6]
 minimum_read_count = int(sys.argv[7])
+minimum_repeats = int(sys.argv[8])
+
+if '.fofn' in fasta_files:
+    fastaList=[]
+    for line in open(fasta_files):
+        fasta=line.strip()
+        fastaList.append(fasta)
+else:
+    fastaList=fasta_files.split(',')
+
+
+if '.fofn' in subreads:
+    subreadList=[]
+    for line in open(subreads):
+        sub=line.strip()
+        subreadList.append(sub)
+else:
+    subreadList=subreads.split(',')
 
 
 def find_peaks(starts, ends):
@@ -69,9 +89,9 @@ def collect_splice_events(path):
     return splice_dict
 
 
-def sort_reads_into_splice_junctions(splice_dict, fasta_files, infile):
+def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
     start_end_dict, start_end_dict_mono, readDict = {}, {}, {}
-    for fasta_file in fasta_files.split(','):
+    for fasta_file in fastaList:
         tempSeqs, headers, sequences = [], [], []
         for line in open(fasta_file):
             line = line.rstrip()
@@ -179,7 +199,7 @@ def group_mono_exon_transcripts(start_end_dict, start_end_dict_mono):
 
 def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path):
     left_extras, right_extras = {}, {}
-    file_set = set()
+    file_set = {}
     isoform_counter, isoform_dict, subread_pointer = 0, {}, {}
 
     start_end_dict = group_mono_exon_transcripts(start_end_dict, start_end_dict_mono)
@@ -249,10 +269,15 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
             out_reads_fasta.close()
             out_reads_subreads.close()
 
-            file_set.add(individual_path + '/parsed_reads/' + filename
-                         + '.fasta' + '\t' + individual_path
-                         + '/parsed_reads/' + filename + '_subreads.fastq'
-                         + '\t' + new_identity + '\n')
+            file_entry = individual_path + '/parsed_reads/' + filename\
+                         + '.fasta' + '\t' + individual_path\
+                         + '/parsed_reads/' + filename + '_subreads.fastq'\
+                         + '\t' + new_identity + '\n'
+
+            if file_entry not in file_set:
+                file_set[file_entry]=0
+
+            file_set[file_entry]+=1
             read = read.split()[0].split('_')[0][1:]
 
             subread_pointer[read] = individual_path + '/parsed_reads/' + filename + '_subreads.fastq'
@@ -261,38 +286,21 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
             #                              + '\n+\n' + qual + '\n')
 
     out = open(individual_path + 'isoform_list', 'a')
-    for item in file_set:
-        out.write(item)
+    for item,repeats in file_set.items():
+        if repeats >= minimum_repeats:
+            out.write(item)
     out.close()
     return subread_pointer
 
 
-def read_subreads(seq_file, infile, subread_pointer):
-    lineNum, lastPlus, root_name = 0, False, ''
-    name, seq, qual = '', '', ''
-    for line in open(seq_file):
-        line = line.rstrip()
-        if not line:
-            continue
-
-        # make an entry as a list and append the header to that list
-        if lineNum % 4 == 0 and line[0] == '@':
-            if lastPlus:  # chrom_reads needs to contain root_names
-                filepath = subread_pointer.get(root_name)
-                if filepath:
-                    outfile = open(filepath, 'a')
-                    outfile.write('@%s\n%s\n+\n%s\n' % (name, seq, qual))
-                    outfile.close()
-            name = line[1:]
-            root_name = ('-').join(name.split('_')[0].split('-')[:5])
-
-        if lineNum % 4 == 1:
-            seq = line
-        if lineNum % 4 == 2:
-            lastPlus = True
-        if lineNum % 4 == 3 and lastPlus:
-            qual = line
-        lineNum += 1
+def read_subreads(seq_file, subread_pointer):
+    for name, seq, qual in mp.fastx_read(seq_file):
+        root_name = ('-').join(name.split('_')[0].split('-')[:5])
+        filepath = subread_pointer.get(root_name)
+        if filepath:
+            outfile = open(filepath, 'a')
+            outfile.write('@%s\n%s\n+\n%s\n' % (name, seq, qual))
+            outfile.close()
 
 
 def main():
@@ -311,13 +319,14 @@ def main():
     print('\treading splice sites')
     splice_dict = splice_dict = collect_splice_events(path)
     print('\tdefining spliceforms')
-    start_end_dict, start_end_dict_mono = sort_reads_into_splice_junctions(splice_dict, fasta_files, infile)
+    start_end_dict, start_end_dict_mono = sort_reads_into_splice_junctions(splice_dict, fastaList, infile)
     print('\tdefining isoforms')
     subread_pointer = define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
     print('\treading subreads')
-    for subread_file in subreads.split(','):
+
+    for subread_file in subreadList:
         print('    ' + subread_file)
-        read_subreads(subread_file, infile, subread_pointer)
+        read_subreads(subread_file, subread_pointer)
 
 
 if __name__ == '__main__':

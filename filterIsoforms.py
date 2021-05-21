@@ -6,7 +6,7 @@ import sys
 import os
 import numpy as np
 import argparse
-
+import mappy as mp
 
 def argParser():
     parser = argparse.ArgumentParser(
@@ -27,7 +27,7 @@ def argParser():
               programs, specify them here. Use for poa, racon, gonk,\
               blat, and minimap2 if they are not in your path.',
     )
-    parser.add_argument('--internal_ratio', '-n', type=float, action='store')
+    parser.add_argument('-n','--internal_ratio', type=float, action='store')
     parser.add_argument('-r', '--minimum_ratio', type=float)
     parser.add_argument('-R', '--minimum_reads', type=float)
     parser.add_argument('-G', '--genome_sequence', type=str)
@@ -117,24 +117,8 @@ def reverse_complement(sequence):
 def read_fasta(inFile):
     '''Reads in FASTA files, returns a dict of header:sequence'''
     readDict = {}
-    tempSeqs, headers, sequences = [], [], []
-    for line in open(inFile):
-        line = line.rstrip()
-        if not line:
-            continue
-        if line.startswith('>'):
-            headers.append(line.split()[0][1:])
-        # covers the case where the file ends while reading sequences
-        if line.startswith('>'):
-            sequences.append(''.join(tempSeqs).upper())
-            tempSeqs = []
-        else:
-            tempSeqs.append(line)
-    sequences.append(''.join(tempSeqs).upper())
-    sequences = sequences[1:]
-    for i in range(len(headers)):
-        if headers[i].split('_')[-1] != '0' and sequences[i]:
-            readDict[headers[i]] = sequences[i]
+    for name,seq,qual in mp.fastx_read(inFile):
+        readDict[name]=seq
     return readDict
 
 

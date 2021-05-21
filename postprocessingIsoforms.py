@@ -5,6 +5,7 @@
 import sys
 import os
 import argparse
+import mappy as mp
 
 
 def argParser():
@@ -68,20 +69,9 @@ else:
 
 def read_fasta(inFile):
     '''Reads in FASTA files, returns a dict of header:sequence'''
-    readDict, lastHead = {}, ''
-    for line in open(inFile):
-        line = line.rstrip()
-        if not line:
-            continue
-        if line.startswith('>'):
-            if readDict:
-                readDict[lastHead] = ''.join(readDict[lastHead])
-            readDict[line[1:]] = []
-            lastHead = line[1:]
-        else:
-            readDict[lastHead].append(line.upper())
-    if readDict:
-        readDict[lastHead] = ''.join(readDict[lastHead])
+    readDict  = {}
+    for name,seq,qual in mp.fastx_read(inFile):
+        readDict[name]=seq
     return readDict
 
 
@@ -178,11 +168,11 @@ def remove_polyA(seq):
         if not Astate:
             if base == 'A':
                 Astretch += 1
-                if Astretch == 4:
+                if Astretch == 6:
                     Astate = True
                     lastA = pos
             else:
-                Astretch = 0
+                Astretch=0
         if Astate:
             if base != 'A':
                 Vstretch += 1

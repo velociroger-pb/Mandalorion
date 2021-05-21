@@ -59,9 +59,9 @@ def determine_cov(cov_area, chrom, reverse, peak_center, histo_cov):
     counter = 0
     for base_f in cov_area:
         count = False
-        if not reverse and base_f > peak_center:
+        if reverse and base_f < peak_center:
             count = True
-        elif reverse and base_f < peak_center:
+        elif not reverse and base_f > peak_center:
             count = True
         if count:
             if counter <= 3:
