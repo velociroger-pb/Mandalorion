@@ -93,23 +93,8 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
     start_end_dict, start_end_dict_mono, readDict = {}, {}, {}
     for fasta_file in fastaList:
         tempSeqs, headers, sequences = [], [], []
-        for line in open(fasta_file):
-            line = line.rstrip()
-            if not line:
-                continue
-            if line.startswith('>'):
-                headers.append(line.split()[0][1:])
-            # covers the case where the file ends while reading sequences
-            if line.startswith('>'):
-                sequences.append(''.join(tempSeqs).upper())
-                tempSeqs = []
-            else:
-                tempSeqs.append(line)
-        sequences.append(''.join(tempSeqs).upper())
-        sequences = sequences[1:]
-        for i in range(len(headers)):
-            readDict[('-').join(headers[i].split('_')[0].split('-')[:5])] = [headers[i], sequences[i]]
-    read_dict = readDict
+        for name,seq,qual in mp.fastx_read(fasta_file):
+            readDict[('-').join(name.split('_')[0].split('-')[:5])] = [name, seq]
 
     for line in open(infile):
         a = line.strip().split('\t')
@@ -136,7 +121,7 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
             left_splice = blockstart + blocksize
             right_splice = int(blockstarts[x + 1])
             if right_splice - left_splice > 50:
-                if not splice_dict.get(read_chromosome):
+                if read_chromosome not in splice_dict:
                     failed = True
                     break
                 else:
@@ -150,21 +135,21 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
             print(failed)
         if not failed:
             if identity.split('_')[1] != '':
-                if not start_end_dict.get(identity):
+                if identity not in start_end_dict:
                     start_end_dict[identity] = []
                 start_end_dict[identity].append((start, end,
-                                                 '>' + read_dict[name][0] + '\n'
-                                                 + read_dict[name][1] + '\n',
+                                                 '>' + readDict[name][0] + '\n'
+                                                 + readDict[name][1] + '\n',
                                                  left_extra,
                                                  right_extra,
                                                  read_direction))
             else:
-                if not start_end_dict_mono.get(identity):
+                if not identity not in start_end_dict_mono:
                     start_end_dict_mono[identity] = []
 
                 start_end_dict_mono[identity].append((start, end,
-                                                      '>' + read_dict[name][0] + '\n'
-                                                      + read_dict[name][1] + '\n',
+                                                      '>' + readDict[name][0] + '\n'
+                                                      + readDict[name][1] + '\n',
                                                       left_extra,
                                                       right_extra,
                                                       read_direction))
