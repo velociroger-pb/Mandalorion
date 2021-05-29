@@ -204,45 +204,45 @@ else:
 psl_file = path + '/mm2Alignments.psl'
 clean_psl_file = path + '/mm2Alignments.clean.psl'
 print('Converting sam output to psl format')
-os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
+#os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
 print('Cleaning psl file of small Indels')
-os.system('%s %s %s ' % ('python3 clean_psl.py', psl_file, clean_psl_file))
+#os.system('%s %s %s ' % ('python3 clean_psl.py', psl_file, clean_psl_file))
 print('Finding Splice sites')
-os.system(
-    'python3 spliceSites.py %s %s %s %s %s %s %s %s'
-    % (
-        clean_psl_file,
-        path,
-        '0.05',
-        genome_annotation,
-        'g',
-        sam_file,
-        window,
-        feature_count,
-    )
-)
+#os.system(
+#    'python3 spliceSites.py %s %s %s %s %s %s %s %s'
+#    % (
+#        clean_psl_file,
+#        path,
+#        '0.05',
+#        genome_annotation,
+#        'g',
+#        sam_file,
+#        window,
+#        feature_count,
+#    )
+#)
 print('Identifying Isoforms')
 # This script sort raw reads into isoform bins.
 # The two number variables determine the window around TSS and TES
 # in which read ends can fall and still be matched to the site.
-os.system(
-    'python3 defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
-    % (
-        clean_psl_file,
-        path,
-        downstream_buffer,
-        upstream_buffer,
-        subreads,
-        fasta_files,
-        feature_count,
-        minimum_reads
-    )
-)
+#os.system(
+#    'python3 defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
+#    % (
+#        clean_psl_file,
+#        path,
+#        downstream_buffer,
+#        upstream_buffer,
+#        subreads,
+#        fasta_files,
+#        feature_count,
+#        minimum_reads
+#    )
+#)
 print('Generating Isoform Consensus Sequences')
-os.system(
-    'python3 createConsensi.py -p %s -s %s -c %s -n %s'
-    % (path, subsample_consensus, config_file, minimap2_threads)
-)
+#os.system(
+#    'python3 createConsensi.py -p %s -s %s -c %s -n %s'
+#    % (path, subsample_consensus, config_file, minimap2_threads)
+#)
 print('Filtering Isoforms')
 os.system(
     'python3 filterIsoforms.py \

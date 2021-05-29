@@ -186,6 +186,7 @@ def collect_reads(infile, sam_file, dir_dict, target_chrom):
 
 
 def parse_genome(input_file, left_bounds, right_bounds):
+    polyAWhiteList=[]
     chrom_list = set()
     gene_dict = {}
     for line in open(input_file):
@@ -202,6 +203,7 @@ def parse_genome(input_file, left_bounds, right_bounds):
         transcript_data = gene_dict[transcript_id]
 
         chrom = transcript_data[0][0]
+        direction=transcript_data[0][3]
         chrom_list.add(chrom)
         if chrom not in right_bounds:
             left_bounds[chrom] = {'5': [], '3': []}
@@ -209,6 +211,12 @@ def parse_genome(input_file, left_bounds, right_bounds):
 
         start = sorted(transcript_data, key=lambda x: int(x[1]))[0][1]
         end = sorted(transcript_data, key=lambda x: int(x[2]), reverse=True)[0][2]
+        direction=transcript_data[0][3]
+
+        if direction=='+':
+            polyAWhiteList.append((chrom,direction,end,transcript_id))
+        elif direction=='-':
+            polyAWhiteList.append((chrom,direction,start,transcript_id))
 
         for entry in transcript_data:
             if entry[1] != start:
@@ -221,7 +229,7 @@ def parse_genome(input_file, left_bounds, right_bounds):
                     left_bounds[chrom]['5'].append(int(entry[2]))
                 if entry[3] == '-':
                     left_bounds[chrom]['3'].append(int(entry[2]))
-    return chrom_list, left_bounds, right_bounds
+    return chrom_list, left_bounds, right_bounds, polyAWhiteList
 
 
 def make_genome_bins(bounds, side, peaks, chrom, peak_areas):
@@ -311,7 +319,16 @@ def collect_chroms(isoform_psl, chroms):
 def main():
     left_bounds, right_bounds = {}, {}
     print('\tparsing annotated splice sites')
-    chrom_list, left_bounds, right_bounds = parse_genome(genome_file, left_bounds, right_bounds)
+    chrom_list, left_bounds, right_bounds, polyAWhiteList = parse_genome(genome_file, left_bounds, right_bounds)
+
+    print(len(polyAWhiteList), 'poly(A) sites whitelisted')
+    outPolyA=open(out_path+'/polyAWhiteList.bed','w')
+    for chrom,direction,end,transcript_id in polyAWhiteList:
+        polyA=int(end)
+        polyAstart=polyA-20
+        polyAend=polyA+20
+        outPolyA.write('%s\t%s\t%s\t%s\t%s\t%s\n' %(chrom,str(polyAstart),str(polyAend),transcript_id,'0',direction))
+    outPolyA.close()
 
     Left_Peaks = 0
     Right_Peaks = 0

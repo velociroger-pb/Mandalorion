@@ -106,7 +106,7 @@ consensus = 'python3 ' + consensus
 
 out2 = open(path + '/Isoform_Consensi_filtered.fasta', 'w')
 out3 = open(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl', 'w')
-
+polyAWhiteListFile=path + '/polyAWhiteList.bed'
 
 def reverse_complement(sequence):
     '''Returns the reverse complement of a sequence'''
@@ -166,7 +166,7 @@ def filter_isoforms(count, isoform_names, chromosome, psl_info, overhangs, minim
     return filtered_isoforms
 
 
-def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence):
+def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList):
     internal_buffer = 20
     filtered_isoforms = []
     covered = {}
@@ -200,10 +200,11 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
         if direction == '+':
             Acontent = genome_sequence[chromosome][end:end + 15].upper().count('A') / 15
             polyArange = np.arange(end + 3, end + 23, 1)
+            polyApos=end
         elif direction == '-':
             Acontent = genome_sequence[chromosome][start - 15:start].upper().count('T') / 15
             polyArange = np.arange(start - 23, start - 3, 1)
-
+            polyApos=start
         extend = set()
         extendDict = {}
         for base in polyArange:
@@ -232,7 +233,7 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
             filtered_isoforms.append(isoform)
         else:
             show = False
-            decision = []
+            decision = True
             if '195088' in isoform:
                 show = True
             if show:
@@ -240,15 +241,24 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
                 print('extend', extend)
             if len(extend) > 0:
                 if Acontent > Acutoff:
-                    decision.append('False')
-                    sys.stderr.write(
-                        isoform + ' filtered because at least one isoform (including '
-                        + str(list(extend)[0])
-                        + ') is extending beyond its polyA site and the genomic A content at its putative polyA site is '
-                        + str(Acontent) + ' which is higher than the cutoff set to ' + str(Acutoff) + '\n'
+                    if polyApos in polyAWhiteList[direction]:
+                        sys.stderr.write(
+                            isoform + ' would have been filtered because at least one isoform (including '
+                            + str(list(extend)[0])
+                            + ') is extending beyond its polyA site and the genomic A content at its putative polyA site is '
+                            + str(Acontent) + ' which is higher than the cutoff set to ' + str(Acutoff)
+                            + 'but it was kept because its polyA site was part of the polyA site whitelist\n'
                     )
+                    else:
+                        decision=False
+                        sys.stderr.write(
+                            isoform + ' filtered because at least one isoform (including '
+                            + str(list(extend)[0])
+                            + ') is extending beyond its polyA site and the genomic A content at its putative polyA site is '
+                            + str(Acontent) + ' which is higher than the cutoff set to ' + str(Acutoff) + '\n'
+                        )
 
-            if len(decision) == 0:
+            if decision == True:
                 isoform_abundance = int(isoform.split('_')[-1])
                 for match in status:
                     if show:
@@ -298,19 +308,19 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
                                     + ' reads for the isoform containing it which is below that internal ratio of '
                                     + str(internal_ratio) + '\n'
                                 )
-                                decision.append('False')
+                                decision=False
                                 break
 
                             elif np.abs(coordinates[0] - match_coordinates[0]) < downstream_buffer:
                                 if np.abs(coordinates[-1] - match_coordinates[-1]) < downstream_buffer:
                                     if isoform_abundance < match_abundance:
                                         sys.stderr.write(isoform + ' filtered because it is internal (all bases and splice junctions contained in) and almost identical to ' + match + '\n')
-                                        decision.append('False')
+                                        decision=False
                                         break
 
             if show:
                 print(decision)
-            if 'False' not in decision:
+            if  decision==True:
                 filtered_isoforms.append(isoform)
 
     return filtered_isoforms
@@ -423,6 +433,19 @@ def write_isoforms(isoform_list, isoforms, psl_info):
         out2.write('>%s\n%s\n' % (isoform, sequence))
         out3.write('\t'.join(info) + '\n')
 
+def readWhiteList(polyA,chromosome):
+
+    WhiteList={}
+    WhiteList['+']=set()
+    WhiteList['-']=set()
+
+    for line in open(polyA):
+        a=line.strip().split('\t')
+        if chromosome == a[0]:
+            for pos in np.arange(int(a[1]),int(a[2]),1):
+                WhiteList[a[5]].add(pos)
+    return WhiteList
+
 
 def main(infile):
     print('simplifying isoform names')
@@ -446,6 +469,8 @@ def main(infile):
     for chromosome in chromosomes:
         print(chromosome)
         sys.stderr.write(chromosome + '\n')
+        print('reading polyA white list')
+        polyAWhiteList=readWhiteList(polyAWhiteListFile,chromosome)
         print('reading in isoforms and applying absolute filters for abundance, lengths, and overhangs')
         psl_dict, psl_info, isoform_list = parse_clean_psl(clean_psl_file, chromosome)
         print('getting isoform loci read counts')
@@ -453,7 +478,7 @@ def main(infile):
         print('filtering isoforms for relative read coverage starting with', len(isoform_list), 'isoforms')
         isoform_list = filter_isoforms(count, isoform_list, chromosome, psl_info, overhangs, minimum_isoform_length)
         print('finding fully contained isoforms in', len(isoform_list), 'remaining isoforms')
-        isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence)
+        isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList)
         print('writing', len(isoform_list), 'isoforms to file')
         write_isoforms(isoform_list, isoforms, psl_info)
 
