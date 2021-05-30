@@ -147,20 +147,22 @@ def write_fasta_file(path, adapter_dict, reads):
                 direction = screen_for_53(seq1, seq2)
                 ada = sequence[plus_list_position[0] + 3:minus_list_position[0] - 3]
                 if direction == '+':
-                    ada, polyA = remove_polyA(ada)
+                    ada, polyA = removePolyA(ada)
+                    ada=removeTSO(ada)
                     if polyA:
                         out.write('>%s\n%s\n' % (name, ada))
                         out3.write('>%s\n%s\n' % (name, reverse_complement(sequence[:plus_list_position[0]])))
                         out5.write('>%s\n%s\n' % (name, sequence[minus_list_position[0]:]))
                 elif direction == '-':
-                    ada, polyA = remove_polyA(reverse_complement(ada))
+                    ada, polyA = removePolyA(reverse_complement(ada))
+                    ada = removeTSO(ada)
                     if polyA:
                         out.write('>%s\n%s\n' % (name, ada))
                         out5.write('>%s\n%s\n' % (name, reverse_complement(sequence[:plus_list_position[0]])))
                         out3.write('>%s\n%s\n' % (name, sequence[minus_list_position[0]:]))
 
 
-def remove_polyA(seq):
+def removePolyA(seq):
     reverse = seq[::-1]
     Astate, Astretch, Vstretch, trimPos = False, 0, 0, 0
     for pos in range(0, len(reverse), 1):
@@ -188,6 +190,25 @@ def remove_polyA(seq):
     reverseTrim = reverse[trimPos:]
     seqTrim = reverseTrim[::-1]
     return seqTrim, Astate
+
+def removeTSO(sequence):
+
+    Gstart=False
+    seqStart=False
+    TSOseq=ends.split(',')[0]
+    for pos in range(0, 50, 1):
+        match = sequence[pos:pos+len(TSOseq)]
+        if match==TSOseq:
+            Gstart=pos+len(TSOseq)
+            break
+    if Gstart:
+        for pos in range(Gstart,Gstart+30):
+            if sequence[pos] != 'G':
+                seqStart=pos
+                break
+    if seqStart:
+        sequence=[seqStart:]
+    return sequence
 
 
 def main():
