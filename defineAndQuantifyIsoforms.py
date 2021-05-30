@@ -144,7 +144,7 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
                                                  right_extra,
                                                  read_direction))
             else:
-                if not identity not in start_end_dict_mono:
+                if identity not in start_end_dict_mono:
                     start_end_dict_mono[identity] = []
 
                 start_end_dict_mono[identity].append((start, end,
