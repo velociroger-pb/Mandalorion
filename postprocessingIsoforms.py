@@ -207,7 +207,7 @@ def removeTSO(sequence):
                 seqStart=pos
                 break
     if seqStart:
-        sequence=[seqStart:]
+        sequence=sequence[seqStart:]
     return sequence
 
 
