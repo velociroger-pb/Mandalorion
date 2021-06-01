@@ -38,6 +38,7 @@ def argParser():
     parser.add_argument('-s', '--splice_window', type=str)
     parser.add_argument('-d', '--downstream_buffer', type=str)
     parser.add_argument('-I', '--minimum_isoform_length', type=str)
+    parser.add_argument('-m', '--mandopath', type=str)
     parser.add_argument(
         '-e', '--ends', type=str, default='ATGGG,AAAAA',
         help='Ends of your sequences. Defaults to Smartseq ends.\
@@ -89,7 +90,7 @@ minimap2_threads = args['minimap2_threads']
 ends = args['ends']
 sw = int(args['splice_window'])
 downstream_buffer = int(args['downstream_buffer'])
-
+MandoPath=args['mandopath']
 
 if args['config']:
     progs = configReader(args['config'])
@@ -452,7 +453,7 @@ def main(infile):
     temp_fasta = path + '/isoform_tmp.fasta'
     simplify(infile, temp_fasta, path + '/Isoform_long_names.txt')
     genome_sequence = read_fasta(genome)
-    os.system('%s -i %s -a %s -o %s -c %s -e %s' % ('python3 postprocessingIsoforms.py', temp_fasta, adapter, path, configIn, ends))
+    os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s' % (MandoPath,'postprocessingIsoforms.py', temp_fasta, adapter, path, configIn, ends))
     print('reading fasta')
     processed_isoforms = path + 'Isoforms_full_length_consensus_reads.fasta'
     isoforms = read_fasta(processed_isoforms)
@@ -463,7 +464,7 @@ def main(infile):
     print('%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
     os.system('%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
     os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
-    os.system('%s %s %s ' % ('python3 clean_psl.py', psl_file, clean_psl_file))
+    os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
     print('collecting chromosomes')
     chromosomes = collect_chromosomes(clean_psl_file)
     for chromosome in chromosomes:
