@@ -132,6 +132,8 @@ feature_count = args.minimum_feature_count
 Acutoff = args.Acutoff
 sam_file=args.sam_file
 
+MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
+
 
 if '.fofn' in fasta_files:
     fastaList=[]
@@ -207,11 +209,12 @@ clean_psl_file = path + '/mm2Alignments.clean.psl'
 print('Converting sam output to psl format')
 os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
 print('Cleaning psl file of small Indels')
-os.system('%s %s %s ' % ('python3 clean_psl.py', psl_file, clean_psl_file))
+os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
 print('Finding Splice sites')
 os.system(
-    'python3 spliceSites.py %s %s %s %s %s %s %s %s'
+    'python3 %s/spliceSites.py %s %s %s %s %s %s %s %s'
     % (
+        MandoPath
         clean_psl_file,
         path,
         '0.05',
@@ -227,8 +230,9 @@ print('Identifying Isoforms')
 # The two number variables determine the window around TSS and TES
 # in which read ends can fall and still be matched to the site.
 os.system(
-    'python3 defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
+    'python3 %s/defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
     % (
+        MandoPath
         clean_psl_file,
         path,
         downstream_buffer,
@@ -241,15 +245,16 @@ os.system(
 )
 print('Generating Isoform Consensus Sequences')
 os.system(
-    'python3 createConsensi.py -p %s -s %s -c %s -n %s'
-    % (path, subsample_consensus, config_file, minimap2_threads)
+    'python3 %s/createConsensi.py -p %s -s %s -c %s -n %s'
+    % (MandoPath,path, subsample_consensus, config_file, minimap2_threads)
 )
 print('Filtering Isoforms')
 os.system(
-    'python3 filterIsoforms.py \
+    'python3 %s/filterIsoforms.py \
         -p %s -i %s -r %s -R %s -n %s -a %s -G %s -c %s \
-        -O %s -t %s -e %s -A %s -s %s -d %s -I %s 2> %s'
+        -O %s -t %s -e %s -A %s -s %s -d %s -I %s -m %s 2> %s'
     % (
+        MandoPath,
         path,
         path + '/Isoform_Consensi.fasta',
         minimum_ratio,
@@ -265,11 +270,12 @@ os.system(
         window,
         downstream_buffer,
         minimum_isoform_length,
+        MandoPath,
         path + '/filter_reasons.txt',
     )
 )
 print('Quantifying Isoforms')
 os.system(
-    'python3 assignReadsToIsoforms.py -m %s -f %s'
-    % (path, fasta_files)
+    'python3 %s/assignReadsToIsoforms.py -m %s -f %s'
+    % (MandoPath,path, fasta_files)
 )
