@@ -214,7 +214,7 @@ print('Finding Splice sites')
 os.system(
     'python3 %s/spliceSites.py %s %s %s %s %s %s %s %s'
     % (
-        MandoPath
+        MandoPath,
         clean_psl_file,
         path,
         '0.05',
@@ -232,7 +232,7 @@ print('Identifying Isoforms')
 os.system(
     'python3 %s/defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
     % (
-        MandoPath
+        MandoPath,
         clean_psl_file,
         path,
         downstream_buffer,
