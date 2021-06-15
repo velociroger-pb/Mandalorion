@@ -255,7 +255,7 @@ if adapter and ends:
     % (MandoPath,'postprocessingIsoforms.py', path+'/isoform_tmp.fasta', adapter, path, config_file,ends))
 else:
     print('adapter and/or ends not provided so reads are presumed to have been full-length and in the + direction')
-    os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta')
+    os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta'))
 
 print('Filtering Isoforms')
 os.system(
