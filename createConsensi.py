@@ -92,6 +92,20 @@ else:
 consensus = 'python3 ' + consensus
 
 
+def simplify(infile, outfile, namefile):
+    isoforms = read_fasta(infile)
+    out = open(outfile, 'w')
+    out1 = open(namefile, 'w')
+    counter = 0
+    for isoform, sequence in isoforms.items():
+        if len(sequence) > 0:
+            counter += 1
+            out.write('>Isoform' + '_' + str(counter) + '_' + isoform.split('_')[-1] + '\n' + sequence + '\n')
+            out1.write(isoform + '\tIsoform' + '_' + str(counter) + '\n')
+    out.close()
+    out1.close()
+
+
 def read_fastq_file(seq_file):
     '''
     Takes a FASTQ file and returns a list of tuples
@@ -310,6 +324,7 @@ def main():
             for lines in open(path + '/mp/' + counter + '.fasta'):
                 combined_consensus_file.write(lines)
     combined_consensus_file.close()
-
+    temp_fasta = path + '/isoform_tmp.fasta'
+    simplify((path + '/Isoform_Consensi.fasta', temp_fasta, path + '/Isoform_long_names.txt')
 
 main()

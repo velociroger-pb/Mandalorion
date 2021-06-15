@@ -51,7 +51,7 @@ parser.add_argument(
     help='Minimum number of reads to make an isoform (default 5)'
 )
 parser.add_argument(
-    '-a', '--adapter_file', type=str,
+    '-a', '--adapter_file', type=str,default=False
     help='Fasta file with 5prime and 3prime adapters'
 )
 parser.add_argument(
@@ -69,12 +69,12 @@ parser.add_argument(
 )
 parser.add_argument(
     '-t', '--minimap2_threads', type=str, default='4',
-    help='Number of threads to use when running minimap (default 4)'
+    help='Number of threads to use when running minimap and consensus calling (default 4)'
 )
 parser.add_argument(
-    '-e', '--ends', type=str, default='ATGGG,AAAAA',
+    '-e', '--ends', type=str, default=False,
     help='''Ends of your sequences. Defaults to Smartseq ends.
-            Format: 5prime,3prime'''
+            Format: 5prime,3prime; Example: ATGGG,AAAAA '''
 )
 parser.add_argument(
     '-I', '--minimum_isoform_length', type=str, default='500',
@@ -248,11 +248,20 @@ os.system(
     'python3 %s/createConsensi.py -p %s -s %s -c %s -n %s'
     % (MandoPath,path, subsample_consensus, config_file, minimap2_threads)
 )
+
+if adapter and ends:
+    print('Trimming reads based on adapters and end sequences')
+    os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s' 
+    % (MandoPath,'postprocessingIsoforms.py', path+'/isoform_tmp.fasta', adapter, path, config_file,ends))
+else:
+    print('adapter and/or ends not provided so reads are presumed to have been full-length and in the + direction')
+    os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta')
+
 print('Filtering Isoforms')
 os.system(
     'python3 %s/filterIsoforms.py \
-        -p %s -i %s -r %s -R %s -n %s -a %s -G %s -c %s \
-        -O %s -t %s -e %s -A %s -s %s -d %s -I %s -m %s 2> %s'
+        -p %s -i %s -r %s -R %s -n %s -G %s -c %s \
+        -O %s -t %s -A %s -s %s -d %s -I %s -m %s 2> %s'
     % (
         MandoPath,
         path,
@@ -260,12 +269,10 @@ os.system(
         minimum_ratio,
         minimum_reads,
         minimum_internal_ratio,
-        adapter,
         genome_sequence,
         config_file,
         overhangs,
         minimap2_threads,
-        ends,
         Acutoff,
         window,
         downstream_buffer,

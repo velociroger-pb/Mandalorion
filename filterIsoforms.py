@@ -31,7 +31,6 @@ def argParser():
     parser.add_argument('-r', '--minimum_ratio', type=float)
     parser.add_argument('-R', '--minimum_reads', type=float)
     parser.add_argument('-G', '--genome_sequence', type=str)
-    parser.add_argument('-a', '--adapter', type=str)
     parser.add_argument('-O', '--overhangs', type=str)
     parser.add_argument('-t', '--minimap2_threads', type=str)
     parser.add_argument('-A', '--Acutoff', type=str)
@@ -39,10 +38,6 @@ def argParser():
     parser.add_argument('-d', '--downstream_buffer', type=str)
     parser.add_argument('-I', '--minimum_isoform_length', type=str)
     parser.add_argument('-m', '--mandopath', type=str)
-    parser.add_argument(
-        '-e', '--ends', type=str, default='ATGGG,AAAAA',
-        help='Ends of your sequences. Defaults to Smartseq ends.\
-              Format: 5prime,3prime',
     )
 
     return vars(parser.parse_args())
@@ -449,18 +444,14 @@ def readWhiteList(polyA,chromosome):
 
 
 def main(infile):
-    print('simplifying isoform names')
-    temp_fasta = path + '/isoform_tmp.fasta'
-    simplify(infile, temp_fasta, path + '/Isoform_long_names.txt')
+    print('reading genome sequence to determine A content of putative polyA sites')
     genome_sequence = read_fasta(genome)
-    os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s' % (MandoPath,'postprocessingIsoforms.py', temp_fasta, adapter, path, configIn, ends))
-    print('reading fasta')
+    print('aligning isoform consensus sequences')
     processed_isoforms = path + 'Isoforms_full_length_consensus_reads.fasta'
     isoforms = read_fasta(processed_isoforms)
     sam_file = path + '/Isoforms.aligned.out.sam'
     psl_file = path + '/Isoforms.aligned.out.psl'
     clean_psl_file = path + '/Isoforms.aligned.out.clean.psl'
-    print('aligning reads')
     print('%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
     os.system('%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
     os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
