@@ -51,7 +51,7 @@ parser.add_argument(
     help='Minimum number of reads to make an isoform (default 5)'
 )
 parser.add_argument(
-    '-a', '--adapter_file', type=str,default=False
+    '-a', '--adapter_file', type=str,default=False,
     help='Fasta file with 5prime and 3prime adapters'
 )
 parser.add_argument(
