@@ -191,7 +191,7 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
 
     number_of_isoforms = len(start_end_dict)
     counter = 0
-    for identity in start_end_dict:
+    for identity in sorted(start_end_dict):
         counter += 1
         print('\tprocessing reads assigned to spliceform ', counter,
               ' of ', number_of_isoforms, ' into isoforms', end='\r')
