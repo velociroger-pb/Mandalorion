@@ -441,6 +441,32 @@ def readWhiteList(polyA,chromosome):
     return WhiteList
 
 
+def psl_to_gtf(psl_file,gtf_file):
+    '''
+    converts a psl file to a gtf file. It also adjusts the start position by +1 to but leave the end position of features alone. \
+    This way it accomodates format definitions and coordinate systems.
+    '''
+    out=[]
+    for line in open(psl_file):
+        a = line.strip().split('\t')
+        direction, name, chromosome, start, end=a[8], a[9], a[13], int(a[15]), int(a[16])
+        blocksizes, blockstars, readstarts = a[18].split(',')[:-1], a[20].split(',')[:-1],a[19].split(',')[:-1] 
+
+        out_tmp=[]
+        out_tmp.append('%s\t%s\ttranscript\t%s\t%s\t.\t%s\t.\ttranscript_id "%s"; gene_id "%s.gene"; gene_name "%s"\n' % (chromosome,'hg38',int(start)+1,end,direction,name,name,name))
+        for index in np.arange(0,len(blocksizes),1):
+            blockstart=blockstarts[index]
+            blockend=str(int(blockstarts[index])+int(blocksizes[index]))
+            out_tmp.append('%s\t%s\texon\t%s\t%s\t.\t%s\t.\ttranscript_id "%s"; gene_id "%s.gene"; gene_name "%s"\n' % (chromosome,'hg38',int(blockstart)+1,blockend,direction,name,name,name))
+        out.append(out_tmp)
+
+    gtf_handle=open(gtf_file,'w')
+    for transcript in out:
+        for feature in transcript:
+            gtf_handle.write(feature)
+    gtf_handle.close()
+
+
 def main(infile):
     print('reading genome sequence to determine A content of putative polyA sites')
     genome_sequence = read_fasta(genome)
@@ -471,6 +497,7 @@ def main(infile):
         isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList)
         print('writing', len(isoform_list), 'isoforms to file')
         write_isoforms(isoform_list, isoforms, psl_info)
-
+        print('converting psl output to gtf output')
+        psl_to_gtf(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl',path + '/Isoform_Consensi_filtered.aligned.out.clean.gtf')
 
 main(infile)
