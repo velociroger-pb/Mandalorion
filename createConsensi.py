@@ -325,6 +325,6 @@ def main():
                 combined_consensus_file.write(lines)
     combined_consensus_file.close()
     temp_fasta = path + '/isoform_tmp.fasta'
-    simplify((path + '/Isoform_Consensi.fasta', temp_fasta, path + '/Isoform_long_names.txt')
+    simplify(path + '/Isoform_Consensi.fasta', temp_fasta, path + '/Isoform_long_names.txt')
 
 main()

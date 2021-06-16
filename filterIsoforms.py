@@ -230,8 +230,6 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
         else:
             show = False
             decision = True
-            if '195088' in isoform:
-                show = True
             if show:
                 print('status', status)
                 print('extend', extend)
