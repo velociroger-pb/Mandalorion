@@ -3,15 +3,44 @@
 # Roger Volden
 
 import sys
+import argparse
 
-infile = sys.argv[1]
-out_path = sys.argv[2]
-cutoff = float(sys.argv[3])
-genome_file = sys.argv[4]
-refine = sys.argv[5]
-sam_file = sys.argv[6]
-splice_site_width = int(sys.argv[7])
-minimum_read_count = int(sys.argv[8])
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--infile', '-i', type=int, action='store')
+parser.add_argument('--path', '-p', type=int, action='store')
+parser.add_argument('--cutoff', '-c', type=int, action='store')
+parser.add_argument('--genome_file', '-g', type=int, action='store')
+parser.add_argument('--refine', '-r', type=int, action='store')
+parser.add_argument('--sam_file', '-s', type=int, action='store')
+parser.add_argument('--splice_site_width', '-w', type=int, action='store')
+parser.add_argument('--minimum_read_count', '-m', type=int, action='store')
+parser.add_argument('--white_list_polyA', '-W', type=int, action='store')
+
+
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit(0)
+args = parser.parse_args()
+infile = args.infile
+out_path = args.path + '/'  # path where you want your output files to go
+cutoff = args.cutoff
+genome_file = args.genome_file
+refine = args.refine
+sam_file = args.sam_file
+splice_site_width = args.splice_site_width
+minimum_read_count = args.minimum_read_count
+white_list_polyA=args.white_list_polyA
+
+
+
+
+
+
+
+
 out = open(out_path + '/SS.bed', 'w')
 
 
@@ -146,7 +175,6 @@ def collect_reads(infile, sam_file, dir_dict, target_chrom):
             begin, span = int(a[15]), int(a[16])
             blocksizes = a[18].split(',')[:-1]
             blockstarts = a[20].split(',')[:-1]
-
             cov_set = set()
             low_bounds, up_bounds = [], []
             aligned_bases = 0
@@ -321,13 +349,14 @@ def main():
     print('\tparsing annotated splice sites')
     chrom_list, left_bounds, right_bounds, polyAWhiteList = parse_genome(genome_file, left_bounds, right_bounds)
 
-    print(len(polyAWhiteList), 'poly(A) sites whitelisted')
     outPolyA=open(out_path+'/polyAWhiteList.bed','w')
-    for chrom,direction,end,transcript_id in polyAWhiteList:
-        polyA=int(end)
-        polyAstart=polyA-20
-        polyAend=polyA+20
-        outPolyA.write('%s\t%s\t%s\t%s\t%s\t%s\n' %(chrom,str(polyAstart),str(polyAend),transcript_id,'0',direction))
+    if white_list_polyA=='1':
+        print(len(polyAWhiteList), 'poly(A) sites whitelisted')
+        for chrom,direction,end,transcript_id in polyAWhiteList:
+            polyA=int(end)
+            polyAstart=polyA-20
+            polyAend=polyA+20
+            outPolyA.write('%s\t%s\t%s\t%s\t%s\t%s\n' %(chrom,str(polyAstart),str(polyAend),transcript_id,'0',direction))
     outPolyA.close()
 
     Left_Peaks = 0

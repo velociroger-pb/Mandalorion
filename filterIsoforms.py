@@ -38,7 +38,6 @@ def argParser():
     parser.add_argument('-d', '--downstream_buffer', type=str)
     parser.add_argument('-I', '--minimum_isoform_length', type=str)
     parser.add_argument('-m', '--mandopath', type=str)
-    )
 
     return vars(parser.parse_args())
 
@@ -78,11 +77,9 @@ internal_ratio = args['internal_ratio']
 
 genome = args['genome_sequence']
 configIn = args['config']
-adapter = args['adapter']
 Acutoff = float(args['Acutoff'])
 overhangs = np.array(args['overhangs'].split(','), dtype=int)
 minimap2_threads = args['minimap2_threads']
-ends = args['ends']
 sw = int(args['splice_window'])
 downstream_buffer = int(args['downstream_buffer'])
 MandoPath=args['mandopath']

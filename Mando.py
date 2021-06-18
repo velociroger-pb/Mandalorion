@@ -48,19 +48,28 @@ parser.add_argument(
 parser.add_argument('-i', '--minimum_internal_ratio', type=str, default='1')
 parser.add_argument(
     '-R', '--minimum_reads', type=str, default='5',
-    help='Minimum number of reads to make an isoform (default 5)'
+    help='''Minimum number of reads to make an isoform (default 5)'''
 )
 parser.add_argument(
     '-a', '--adapter_file', type=str,default=False,
-    help='Fasta file with 5prime and 3prime adapters'
+    help='''Fasta file with 5prime and 3prime adapters.
+            Use if your input reads are not trimmed (default C3POa output) and you want to trimm your isoforms.
+            Don't use if your reads are trimmed, aka default ccs/lima output
+            Will be ignored unless you also use -e to set your sequence ends.'''
 )
 parser.add_argument(
     '-f', '--R2C2_Consensus_reads', type=str,
-    help='Fasta file with R2C2 consensus reads, can be entered as a comma separated list'
+    help='''Fasta file with R2C2 consensus reads,
+            can be entered as a single file path,
+            a comma separated list of  file paths,
+            or a path to a file of filenames file (has to end on .fofn) that contains one file path per line'''
 )
 parser.add_argument(
     '-b', '--R2C2_subreads', type=str,
-    help='Fastq file with R2C2 subreads, can be entered as a comma separated list'
+    help='''Fastq file(s) with R2C2 subreads,
+            can be entered as a single file path,
+            a comma separated list of  file paths,
+            or a path to a file of filenames file (has to end on .fofn) that contains one file path per line'''
 )
 parser.add_argument(
     '-O', '--overhangs', type=str, default='0,40,0,40',
@@ -73,8 +82,11 @@ parser.add_argument(
 )
 parser.add_argument(
     '-e', '--ends', type=str, default=False,
-    help='''Ends of your sequences. Defaults to Smartseq ends.
-            Format: 5prime,3prime; Example: ATGGG,AAAAA '''
+    help='''Ends of your sequences.
+            Use if your input reads are not trimmed and you want to trimm your isoforms, aka default C3POa output.
+            Don't use if your reads are trimmed, aka default ccs/lima output
+            Will be ignored unless you also use -a to set adapter sequences.
+            Format: 5prime,3prime; Smart-seq2 Example: ATGGG,AAAAA '''
 )
 parser.add_argument(
     '-I', '--minimum_isoform_length', type=str, default='500',
@@ -96,8 +108,14 @@ parser.add_argument(
             window surrounding their polyA site will be discarded (default 0.5)'''
 )
 parser.add_argument(
+    '-W', '--white_list_polyA', action='store_const', const='1',default='0',
+    help='''If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
+            Annotated transcript ends will be  taken from annotation file given with -g'''
+)
+
+parser.add_argument(
     '-S', '--sam_file', type=str, default=False,
-    help='''If given, Mandalorion will use this file instead of performing its own minimap2 alignment. 
+    help='''If given, Mandalorion will use this file instead of performing its own minimap2 alignment.
             Careful! If names don't line up between this and the fasta and fastq files everything breaks!'''
 )
 parser.add_argument(
@@ -131,6 +149,7 @@ window = args.splice_site_window
 feature_count = args.minimum_feature_count
 Acutoff = args.Acutoff
 sam_file=args.sam_file
+white_list_polyA=args.white_list_polyA
 
 MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
 
@@ -212,7 +231,7 @@ print('Cleaning psl file of small Indels')
 os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
 print('Finding Splice sites')
 os.system(
-    'python3 %s/spliceSites.py %s %s %s %s %s %s %s %s'
+    'python3 %s/spliceSites.py -i %s -p %s -c %s -g %s -r %s -s %s -w %s -m %s -W %s'
     % (
         MandoPath,
         clean_psl_file,
@@ -223,6 +242,7 @@ os.system(
         sam_file,
         window,
         feature_count,
+        white_list_polyA
     )
 )
 print('Identifying Isoforms')
