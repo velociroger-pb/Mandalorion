@@ -6,16 +6,35 @@ import os
 import sys
 import numpy as np
 import mappy as mp
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--infile', '-i', type=str, action='store')
+parser.add_argument('--path', '-p', type=str, action='store')
+parser.add_argument('--downstream_buffer', '-d', type=int, action='store')
+parser.add_argument('--upstream_buffer', '-u', type=int, action='store')
+parser.add_argument('--subreads', '-b', type=str, action='store')
+parser.add_argument('--fasta_files', '-f', type=str, action='store')
+parser.add_argument('--minimum_feature_count', '-n', type=int, action='store')
+parser.add_argument('--minimum_read_count', '-R', type=int, action='store')
 
 
-path = sys.argv[2]
-infile = sys.argv[1]
-upstream_buffer = int(sys.argv[4])
-downstream_buffer = int(sys.argv[3])
-subreads = sys.argv[5]
-fasta_files = sys.argv[6]
-minimum_read_count = int(sys.argv[7])
-minimum_repeats = int(sys.argv[8])
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit(0)
+args = parser.parse_args()
+infile = args.infile
+path = args.path + '/'  # path where you want your output files to go
+downstream_buffer = args.downstream_buffer
+upstream_buffer = args.upstream_buffer
+subreads = args.subreads
+fasta_files = args.fasta_files
+minimum_feature_count = args.minimum_feature_count
+minimum_read_count = args.minimum_read_count
+
+
 
 if '.fofn' in fasta_files:
     fastaList=[]
@@ -57,7 +76,7 @@ def find_peaks(starts, ends):
                 window_position = position + i
                 if window_position in start_count:
                     window_count += start_count[window_position]
-            if window_count >= minimum_read_count:
+            if window_count >= minimum_feature_count:
                 for shift in np.arange(-upstream_buffer, downstream_buffer):
                     start_peaks[position + shift] = position
 
@@ -68,7 +87,7 @@ def find_peaks(starts, ends):
                 window_position = position - i
                 if window_position in end_count:
                     window_count += end_count[window_position]
-            if window_count >= minimum_read_count:
+            if window_count >= minimum_feature_count:
                 for shift in np.arange(-downstream_buffer, upstream_buffer):
                     end_peaks[position + shift] = position
 
@@ -272,7 +291,7 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
 
     out = open(individual_path + 'isoform_list', 'a')
     for item,repeats in file_set.items():
-        if repeats >= minimum_repeats:
+        if repeats >= minimum_read_count:
             out.write(item)
     out.close()
     return subread_pointer
