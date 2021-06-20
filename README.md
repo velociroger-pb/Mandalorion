@@ -33,7 +33,8 @@ python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f R2C2_con
 
 ### Options: ###
 
-  -c CONFIG_FILE, --config_file CONFIG_FILE
+  -c --config_file
+  
                         Tab delimited file that specifies where minimap, blat,
                         emtrey, and racon executables are
                         
