@@ -48,8 +48,7 @@ def configReader(configIn):
         line = line.rstrip().split('\t')
         progs[line[0]] = line[1]
     # should have minimap, racon, consensus, blat, and emtrey
-    possible = set(['minimap2', 'consensus', 'racon',
-                    'blat', 'emtrey', 'poa', 'medaka'])
+    possible = set(['racon', 'medaka'])
     inConfig = set()
     for key in progs.keys():
         inConfig.add(key)
@@ -74,23 +73,11 @@ numThreads = args['numThreads']
 
 if args['config']:
     progs = configReader(args['config'])
-    minimap2 = progs['minimap2']
     racon = progs['racon']
-    consensus = progs['consensus']
-    emtrey = progs['emtrey']
-    blat = progs['blat']
-    poa = progs['poa']
     medaka = progs['medaka']
 else:
-    minimap2 = 'minimap2'
     racon = 'racon'
-    blat = 'blat'
-    poa = 'abpoa'
     medaka = 'medaka_consensus'
-    consensus = 'consensus.py'
-
-consensus = 'python3 ' + consensus
-
 
 def simplify(infile, outfile, namefile):
     isoforms = read_fasta(infile)

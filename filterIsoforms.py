@@ -101,12 +101,6 @@ out2 = open(path + '/Isoform_Consensi_filtered.fasta', 'w')
 out3 = open(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl', 'w')
 polyAWhiteListFile=path + '/polyAWhiteList.bed'
 
-def reverse_complement(sequence):
-    '''Returns the reverse complement of a sequence'''
-    bases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', '-': '-'}
-    return ''.join([bases[x] for x in list(sequence)])[::-1]
-
-
 def read_fasta(inFile):
     '''Reads in FASTA files, returns a dict of header:sequence'''
     readDict = {}
@@ -181,7 +175,6 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
                     if base not in covered[chromosome][direction]:
                         covered[chromosome][direction][base] = set()
                     covered[chromosome][direction][base].add(isoform)
-
     for isoform in isoform_list:
         info = psl_dict[isoform]
         status = set()
@@ -447,7 +440,7 @@ def psl_to_gtf(psl_file,gtf_file):
     for line in open(psl_file):
         a = line.strip().split('\t')
         direction, name, chromosome, start, end=a[8], a[9], a[13], int(a[15]), int(a[16])
-        blocksizes, blockstars, readstarts = a[18].split(',')[:-1], a[20].split(',')[:-1],a[19].split(',')[:-1] 
+        blocksizes, blockstars, readstarts = a[18].split(',')[:-1], a[20].split(',')[:-1],a[19].split(',')[:-1]
 
         out_tmp=[]
         out_tmp.append('%s\t%s\ttranscript\t%s\t%s\t.\t%s\t.\ttranscript_id "%s"; gene_id "%s.gene"; gene_name "%s"\n' % (chromosome,'hg38',int(start)+1,end,direction,name,name,name))
@@ -494,7 +487,7 @@ def main(infile):
         isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList)
         print('writing', len(isoform_list), 'isoforms to file')
         write_isoforms(isoform_list, isoforms, psl_info)
-        print('converting psl output to gtf output')
-        psl_to_gtf(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl',path + '/Isoform_Consensi_filtered.aligned.out.clean.gtf')
+    print('converting psl output to gtf output')
+    psl_to_gtf(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl',path + '/Isoform_Consensi_filtered.aligned.out.clean.gtf')
 
 main(infile)
