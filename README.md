@@ -4,7 +4,11 @@
 
 Episode III.6: I can bring you in warm or I can bring you in cold.
 
-Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments. PacBio/ccs/lima reads (.fastq) and subreads (.bam) files have to be converted (to .fasta and .fastq, respectively) to match C3POa naming convention.
+Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments. 
+
+## PacBio read conversion/formatting ##
+
+PacBio ccs reads (.fastq) and subreads (.bam) files have to be converted (to .fasta and .fastq, respectively) and formatted to match C3POa naming convention. The bam to fastq conversion can be done with bedtools for example. I do recommend gzipping the resulting fastq files using a multithreaded tool like pigz. Then, you can use the *convertPBcDNAreadsForMandalorion.py* script in utils/ to get ccs reads and subreads into the right naming scheme as well as to subsample subreads to a useable depths. 
 
 ## Dependencies ##
 
@@ -28,7 +32,7 @@ python3 Mando.py [OPTIONS]
 
 Running with default settings:
 ```bash
-python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f R2C2_consensi.fasta -b R2C2_subreads.fastq
+python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fasta -b Subreads.fastq
 ```
 
 ### Options: ###
