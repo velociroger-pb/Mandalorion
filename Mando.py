@@ -35,7 +35,10 @@ parser.add_argument(
             isoform consensus sequences (default 500)'''
 )
 parser.add_argument(
-    '-g', '--genome_annotation', type=str, help='Genome annotation file (gtf)'
+    '-g', '--genome_annotation', type=str, default='None',
+    help='''Genome annotation file (gtf).
+            Is used to identify individual annotated splice sites.
+            If -W is set it is also used to white-list annotated polyA sites'''
 )
 parser.add_argument(
     '-G', '--genome_sequence', type=str, help='Genome file (fasta)'
@@ -118,6 +121,23 @@ parser.add_argument(
     help='''If given, Mandalorion will use this file instead of performing its own minimap2 alignment.
             Careful! If names don't line up between this and the fasta and fastq files everything breaks!'''
 )
+
+parser.add_argument(
+    '-M', '--Modules', default='APSDCTFQ',
+    help='''Defines what modules of Mandalorion will be run. By default this includes:
+            A - Alignment,
+            P - .sam to .clean.psl conversion,
+            S - defining splice sites,
+            D - defining isoforms,
+            C - Creating consensus sequences for those isoforms
+            T - Trimming consensus sequences
+            F - Filtering isoforms
+            Q - Quantifying isoforms.
+            Each module need the output of the modules run before it to function properly.
+            Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline'''
+)
+
+
 parser.add_argument(
     '-v', '--version', action='version', version=VERSION,
     help='Prints Mandalorion version'
@@ -150,7 +170,7 @@ feature_count = args.minimum_feature_count
 Acutoff = args.Acutoff
 sam_file=args.sam_file
 white_list_polyA=args.white_list_polyA
-
+Modules=args.Modules
 MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
 
 
@@ -200,109 +220,115 @@ consensus = progs['consensus']
 emtrey = progs['emtrey']
 consensus = 'python3 ' + consensus
 
-if not sam_file:
-    print('Aligning reads')
-    sam_file = path + '/mm2Alignments.sam'
-    tempFasta=path+'/Combined.fasta'
-    out=open(tempFasta,'w')
-    for fasta in fastaList:
-        for name,seq,qual in mp.fastx_read(fasta):
-            out.write('>%s\n%s\n' %(name,seq))
+if 'A' in Modules:
+    if not sam_file:
+        print('Aligning reads')
+        sam_file = path + '/mm2Alignments.sam'
+        tempFasta=path+'/Combined.fasta'
+        out=open(tempFasta,'w')
+        for fasta in fastaList:
+            for name,seq,qual in mp.fastx_read(fasta):
+                out.write('>%s\n%s\n' %(name,seq))
 
-    out.close()
-#    print(
-#        '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
-#        % (minimap2, minimap2_threads, genome_sequence, fasta_string, sam_file)
-#    )
-    os.system(
-        '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
-        % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
-    )
+        out.close()
+        os.system(
+            '%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s '
+            % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
+        )
 
-else:
-    print('sam file provided. Using those alignments instead of aligning the reads in fasta file(s)')
+    else:
+        print('sam file provided. Using those alignments instead of aligning the reads in fasta file(s)')
 
 
 psl_file = path + '/mm2Alignments.psl'
 clean_psl_file = path + '/mm2Alignments.clean.psl'
-print('Converting sam output to psl format')
-os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
-print('Cleaning psl file of small Indels')
-os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
-print('Finding Splice sites')
-os.system(
-    'python3 %s/spliceSites.py -i %s -p %s -c %s -g %s -r %s -s %s -w %s -m %s -W %s'
-    % (
-        MandoPath,
-        clean_psl_file,
-        path,
-        '0.05',
-        genome_annotation,
-        'g',
-        sam_file,
-        window,
-        feature_count,
-        white_list_polyA
+if 'P' in Modules:
+    print('Converting sam output to psl format')
+    os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
+    print('Cleaning psl file of small Indels')
+    os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
+
+if 'S' in Modules:
+    print('Finding Splice sites')
+    os.system(
+        'python3 %s/spliceSites.py -i %s -p %s -c %s -g %s -r %s -s %s -w %s -m %s -W %s'
+        % (
+            MandoPath,
+            clean_psl_file,
+            path,
+            '0.05',
+            genome_annotation,
+            'g',
+            sam_file,
+            window,
+            feature_count,
+            white_list_polyA
+        )
     )
-)
-print('Identifying Isoforms')
+if 'D' in Modules:
+    print('Identifying Isoforms')
 # This script sort raw reads into isoform bins.
 # The two number variables determine the window around TSS and TES
 # in which read ends can fall and still be matched to the site.
-os.system(
-    'python3 %s/defineAndQuantifyIsoforms.py %s %s %s %s %s %s %s %s'
-    % (
-        MandoPath,
-        clean_psl_file,
-        path,
-        downstream_buffer,
-        upstream_buffer,
-        subreads,
-        fasta_files,
-        feature_count,
-        minimum_reads
+    os.system(
+        'python3 %s/defineAndQuantifyIsoforms.py -i %s -p %s -d %s -u %s -b %s -f %s -n %s -R %s'
+        % (
+            MandoPath,
+            clean_psl_file,
+            path,
+            downstream_buffer,
+            upstream_buffer,
+            subreads,
+            fasta_files,
+            feature_count,
+            minimum_reads
+        )
     )
-)
-print('Generating Isoform Consensus Sequences')
-os.system(
-    'python3 %s/createConsensi.py -p %s -s %s -c %s -n %s'
-    % (MandoPath,path, subsample_consensus, config_file, minimap2_threads)
-)
-
-if adapter and ends:
-    print('Trimming reads based on adapters and end sequences')
-    os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s' 
-    % (MandoPath,'postprocessingIsoforms.py', path+'/isoform_tmp.fasta', adapter, path, config_file,ends))
-else:
-    print('adapter and/or ends not provided so reads are presumed to have been full-length and in the + direction')
-    os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta'))
-
-print('Filtering Isoforms')
-os.system(
-    'python3 %s/filterIsoforms.py \
-        -p %s -i %s -r %s -R %s -n %s -G %s -c %s \
-        -O %s -t %s -A %s -s %s -d %s -I %s -m %s 2> %s'
-    % (
-        MandoPath,
-        path,
-        path + '/Isoform_Consensi.fasta',
-        minimum_ratio,
-        minimum_reads,
-        minimum_internal_ratio,
-        genome_sequence,
-        config_file,
-        overhangs,
-        minimap2_threads,
-        Acutoff,
-        window,
-        downstream_buffer,
-        minimum_isoform_length,
-        MandoPath,
-        path + '/filter_reasons.txt',
+if 'C' in Modules:
+    print('Generating Isoform Consensus Sequences')
+    os.system(
+        'python3 %s/createConsensi.py -p %s -s %s -c %s -n %s'
+        % (MandoPath,path, subsample_consensus, config_file, minimap2_threads)
     )
-)
-print('Quantifying Isoforms')
-os.system(
-    'python3 %s/assignReadsToIsoforms.py -m %s -f %s'
-    % (MandoPath,path, fasta_files)
-)
+
+if 'T' in Modules:
+    if adapter and ends:
+        print('Trimming reads based on adapters and end sequences')
+        os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s'
+        % (MandoPath,'postprocessingIsoforms.py', path+'/isoform_tmp.fasta', adapter, path, config_file,ends))
+    else:
+        print('adapter and/or ends not provided so reads are presumed to have been full-length and in the + direction')
+        os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta'))
+
+if 'F' in Modules:
+    print('Filtering Isoforms')
+    os.system(
+        'python3 %s/filterIsoforms.py \
+            -p %s -i %s -r %s -R %s -n %s -G %s -c %s \
+            -O %s -t %s -A %s -s %s -d %s -I %s -m %s 2> %s'
+        % (
+            MandoPath,
+            path,
+            path + '/Isoform_Consensi.fasta',
+            minimum_ratio,
+            minimum_reads,
+            minimum_internal_ratio,
+            genome_sequence,
+            config_file,
+            overhangs,
+            minimap2_threads,
+            Acutoff,
+            window,
+            downstream_buffer,
+            minimum_isoform_length,
+            MandoPath,
+            path + '/filter_reasons.txt',
+        )
+    )
+
+if 'Q' in Modules:
+    print('Quantifying Isoforms')
+    os.system(
+        'python3 %s/assignReadsToIsoforms.py -m %s -f %s'
+        % (MandoPath,path, fasta_files)
+    )
