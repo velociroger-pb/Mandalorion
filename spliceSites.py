@@ -8,16 +8,15 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--infile', '-i', type=int, action='store')
-parser.add_argument('--path', '-p', type=int, action='store')
-parser.add_argument('--cutoff', '-c', type=int, action='store')
-parser.add_argument('--genome_file', '-g', type=int, action='store')
-parser.add_argument('--refine', '-r', type=int, action='store')
-parser.add_argument('--sam_file', '-s', type=int, action='store')
+parser.add_argument('--infile', '-i', type=str, action='store')
+parser.add_argument('--path', '-p', type=str, action='store')
+parser.add_argument('--cutoff', '-c', type=float, action='store')
+parser.add_argument('--genome_file', '-g', type=str, action='store')
+parser.add_argument('--refine', '-r', type=str, action='store')
+parser.add_argument('--sam_file', '-s', type=str, action='store')
 parser.add_argument('--splice_site_width', '-w', type=int, action='store')
 parser.add_argument('--minimum_read_count', '-m', type=int, action='store')
-parser.add_argument('--white_list_polyA', '-W', type=int, action='store')
-
+parser.add_argument('--white_list_polyA', '-W', type=str, action='store')
 
 
 if len(sys.argv) == 1:
@@ -33,13 +32,6 @@ sam_file = args.sam_file
 splice_site_width = args.splice_site_width
 minimum_read_count = args.minimum_read_count
 white_list_polyA=args.white_list_polyA
-
-
-
-
-
-
-
 
 out = open(out_path + '/SS.bed', 'w')
 
@@ -156,59 +148,58 @@ def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_
     return peaks, peak_areas
 
 
-def collect_reads(infile, sam_file, dir_dict, target_chrom):
+def collect_reads(reads, sam_file, dir_dict, target_chrom):
     histo_left_bases, histo_right_bases, histo_cov = {}, {}, {}
     histo_cov[target_chrom] = {}
     histo_left_bases[target_chrom] = {}
     histo_right_bases[target_chrom] = {}
 
-    for line in open(infile):
+    for line in reads:
         a = line.strip().split('\t')
         chrom = a[13]
-        if chrom == target_chrom:
-            name = a[9].split('_')[0]
-            dirn = a[8]
-            if name in dir_dict:
-                dirn = dir_dict[name]
+        name = a[9].split('_')[0]
+        dirn = a[8]
+        if name in dir_dict:
+            dirn = dir_dict[name]
 
-            length = int(a[10])
-            begin, span = int(a[15]), int(a[16])
-            blocksizes = a[18].split(',')[:-1]
-            blockstarts = a[20].split(',')[:-1]
-            cov_set = set()
-            low_bounds, up_bounds = [], []
-            aligned_bases = 0
-            for x in range(0, len(blocksizes)):
-                blockstart = int(blockstarts[x])
-                blocksize = int(blocksizes[x])
-                aligned_bases += blocksize
-                blockend = blockstart + blocksize
-                for y in range(0, blocksize, 10):
-                    rounded = myround(blockstart + y)
-                    cov_set.add(rounded)
-                for yy in range(y, blocksize):
-                    rounded = myround(blockstart + yy)
-                    cov_set.add(rounded)
-                if blockstart != begin:
-                    up_bounds.append(blockstart)
-                if blockend != span:
-                    low_bounds.append(blockend)
+        length = int(a[10])
+        begin, span = int(a[15]), int(a[16])
+        blocksizes = a[18].split(',')[:-1]
+        blockstarts = a[20].split(',')[:-1]
+        cov_set = set()
+        low_bounds, up_bounds = [], []
+        aligned_bases = 0
+        for x in range(0, len(blocksizes)):
+            blockstart = int(blockstarts[x])
+            blocksize = int(blocksizes[x])
+            aligned_bases += blocksize
+            blockend = blockstart + blocksize
+            for y in range(0, blocksize, 10):
+                rounded = myround(blockstart + y)
+                cov_set.add(rounded)
+            for yy in range(y, blocksize):
+                rounded = myround(blockstart + yy)
+                cov_set.add(rounded)
+            if blockstart != begin:
+                up_bounds.append(blockstart)
+            if blockend != span:
+                low_bounds.append(blockend)
 
-            for rounded in cov_set:
-                if rounded not in histo_cov[chrom]:
-                    histo_cov[chrom][rounded] = 0
-                histo_cov[chrom][rounded] += 1
+        for rounded in cov_set:
+            if rounded not in histo_cov[chrom]:
+                histo_cov[chrom][rounded] = 0
+            histo_cov[chrom][rounded] += 1
 
-            if aligned_bases / length <= 0.70:
-                continue
-            for low_bound in low_bounds:
-                if low_bound not in histo_left_bases[chrom]:
-                    histo_left_bases[chrom][low_bound] = []
-                histo_left_bases[chrom][low_bound].append([0, begin, span, cov_set, dirn])
-            for up_bound in up_bounds:
-                if up_bound not in histo_right_bases[chrom]:
-                    histo_right_bases[chrom][up_bound] = []
-                histo_right_bases[chrom][up_bound].append([0, begin, span, cov_set, dirn])
+        if aligned_bases / length <= 0.70:
+            continue
+        for low_bound in low_bounds:
+            if low_bound not in histo_left_bases[chrom]:
+                histo_left_bases[chrom][low_bound] = []
+            histo_left_bases[chrom][low_bound].append([0, begin, span, cov_set, dirn])
+        for up_bound in up_bounds:
+            if up_bound not in histo_right_bases[chrom]:
+                histo_right_bases[chrom][up_bound] = []
+            histo_right_bases[chrom][up_bound].append([0, begin, span, cov_set, dirn])
 
     return histo_left_bases, histo_right_bases, histo_cov
 
@@ -343,11 +334,28 @@ def collect_chroms(isoform_psl, chroms):
         chroms.add(chrom)
     return chroms
 
+def split_reads(infile,chrom_list):
+    readDict={}
+    for chrom in chrom_list:
+        readDict[chrom]=[]
+    for line in open(infile):
+        a=line.strip().split('\t')
+        chrom=a[13]
+        if chrom not in readDict:
+            readDict[chrom]=[]
+        readDict[chrom].append(line)
+        chrom_list.add(chrom)
+    return readDict, chrom_list
 
 def main():
     left_bounds, right_bounds = {}, {}
-    print('\tparsing annotated splice sites')
-    chrom_list, left_bounds, right_bounds, polyAWhiteList = parse_genome(genome_file, left_bounds, right_bounds)
+    if genome_file!='None':
+        print('\tparsing annotated splice sites')
+        chrom_list, left_bounds, right_bounds, polyAWhiteList = parse_genome(genome_file, left_bounds, right_bounds)
+    else:
+        print('\tNo genome annotation provided, so splice sites will be entirely read derived and no polyA sites will be white-listed')
+        chrom_list=set()
+        polyAWhiteList=[]
 
     outPolyA=open(out_path+'/polyAWhiteList.bed','w')
     if white_list_polyA=='1':
@@ -361,16 +369,16 @@ def main():
 
     Left_Peaks = 0
     Right_Peaks = 0
-
-    chrom_list = collect_chroms(infile, chrom_list)
     dir_dict = get_alignment_dir(sam_file)
+    print('\tloading reads')
+    readDict, chrom_list = split_reads(infile, chrom_list)
 
     peak_areas = {}
     print(sorted(list(chrom_list)))
     for chrom in sorted(list(chrom_list)):
         print('\tnow processing ', chrom)
-        print('\tcollecting reads')
-        histo_left_bases, histo_right_bases, histo_cov = collect_reads(infile, sam_file, dir_dict, chrom)
+        print('\t\tparsing reads')
+        histo_left_bases, histo_right_bases, histo_cov = collect_reads(readDict[chrom], sam_file, dir_dict, chrom)
 
         peak_areas[chrom] = {}
         peak_areas[chrom]['l'] = {}
@@ -386,7 +394,7 @@ def main():
             Right_Peaks, peak_areas = make_genome_bins(right_bounds[chrom], 'r', Right_Peaks, chrom, peak_areas)
 
             print(
-                '\tparsed annotation-based splice-sites',
+                '\t\tparsed annotation-based splice-sites',
                 Left_Peaks - Left_Peaks_old,
                 Right_Peaks - Right_Peaks_old,
             )
@@ -396,7 +404,7 @@ def main():
         Right_Peaks, peak_areas = find_peaks(histo_right_bases[chrom], out, Right_Peaks, False, cutoff, histo_cov, 'r', peak_areas, chrom)
 
         print(
-            '\tdetected read-based splice-sites',
+            '\t\tdetected read-based splice-sites',
             Left_Peaks - Left_Peaks_old,
             Right_Peaks - Right_Peaks_old,
         )
