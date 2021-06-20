@@ -4,7 +4,7 @@
 
 Episode III.6: I can bring you in warm or I can bring you in cold.
 
-Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments.
+Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments. PacBio/ccs/lima reads (.fastq) and subreads (.bam) files have to be converted (to .fasta and .fastq, respectively) to match C3POa naming convention.
 
 ## Dependencies ##
 
