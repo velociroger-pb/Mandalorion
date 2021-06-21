@@ -440,7 +440,7 @@ def psl_to_gtf(psl_file,gtf_file):
     for line in open(psl_file):
         a = line.strip().split('\t')
         direction, name, chromosome, start, end=a[8], a[9], a[13], int(a[15]), int(a[16])
-        blocksizes, blockstars, readstarts = a[18].split(',')[:-1], a[20].split(',')[:-1],a[19].split(',')[:-1]
+        blocksizes, blockstarts, readstarts = a[18].split(',')[:-1], a[20].split(',')[:-1],a[19].split(',')[:-1]
 
         out_tmp=[]
         out_tmp.append('%s\t%s\ttranscript\t%s\t%s\t.\t%s\t.\ttranscript_id "%s"; gene_id "%s.gene"; gene_name "%s"\n' % (chromosome,'hg38',int(start)+1,end,direction,name,name,name))
