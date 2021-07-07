@@ -4,8 +4,9 @@
 
 import sys
 import argparse
-
-
+import re
+import numpy as np
+from os.path import isfile
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--infile', '-i', type=str, action='store')
@@ -36,13 +37,151 @@ white_list_polyA=args.white_list_polyA
 out = open(out_path + '/SS.bed', 'w')
 
 
+
+def readSAM(inFile):
+    '''
+    Reads the sam file, parses MD and CIGAR strings, and prints the read
+    name, percent identity, number of matches, number of mismatches,
+    and the number of indels.
+    '''
+    used = set()
+    identities=[]
+    lengths=[]
+    readLengths=[]
+    not_aligned=[]
+    readAccuracy={}
+    CigarDict={}
+    if isfile(out_path+'/mm2Alignments.ident'):
+        for line in open(out_path+'/mm2Alignments.ident'):
+            a=line.strip().split('\t')
+            name=a[0]
+            identity=float(a[1])
+            length=int(a[2])
+            readAccuracy[name]=identity
+            CigarDict[name]=a[3]
+    else:
+        outAccuracy=open(out_path+'/mm2Alignments.ident','w')
+        for line in open(inFile):
+            if line.startswith('@'):
+                continue
+            line = line.rstrip().split('\t')
+            name = line[0].split('_')[0]
+            readLength=len(line[9])
+            chromosome=line[2]
+            if line[1] == '4': # unaligned
+                not_aligned.append(readLength)
+            if line[1] == '4' or name in used: # unaligned
+                continue
+            readDirection=line[1]
+            coverage=1
+            if coverage:
+                used.add(name)
+                for column in line:
+                    if column.startswith('NM:i:'):
+                        NM = int(column[5:])
+                    if column.startswith('nn:i:'):
+                        ambig = int(column[5:])
+                    if column.startswith('cs:Z:'):
+                        CS=column[5:]
+                CIGAR=CS+'_'+line[3]+'_'+line[5]+'_'+name
+                denominator, M, indel = parseCIGAR(line[5])
+                CigarDict[name]=CIGAR
+                mismatch = NM - indel - ambig
+                matches = M - mismatch
+                identity = matches / denominator
+
+                Length=round(M,-2)
+                if name not in readAccuracy:
+                    readAccuracy[name]=identity
+                    outAccuracy.write(name+'\t'+str(identity)+'\t'+str(Length)+'\t'+CIGAR+'\n')
+        outAccuracy.close()
+    return readAccuracy,CigarDict
+
+def parseCIGAR(cstr):
+    '''
+    Goes through the CIGAR string by pairing numbers with the letters.
+    Counts the number of matches/mismatches and indels.
+    Returns the total number of all, matches/mismatches (M), and indels.
+    '''
+    p = re.compile(r'([MIDNSHP=X])')
+    splitCstr = [i+j for i,j in zip(p.split(cstr)[::2], p.split(cstr)[1::2])]
+    total, M, indel = 0, 0, 0
+    for i in range(len(splitCstr)):
+        if splitCstr[i][-1] in 'MID':
+            total += int(splitCstr[i][:-1])
+        if splitCstr[i][-1] == 'M':
+            M += int(splitCstr[i][:-1])
+        if splitCstr[i][-1] in 'ID':
+            indel += int(splitCstr[i][:-1])
+    return total, M, indel
+
+def getCSaroundSS(string,start,end):
+    '''
+    Goes through the CIGAR string by pairing numbers with the letters.
+    Counts the number of matches/mismatches and indels.
+    Returns the total number of all, matches/mismatches (M), and indels.
+    '''
+    CS,genomePosition, cstr, name = string.split('_')
+    genomePosition=int(genomePosition)-1
+
+    status=''
+    p = re.compile(r'([\\=\\+\-\\*\\~])')
+    splitCstr = [i+j for i,j in zip(p.split(CS)[1::2], p.split(CS)[2::2])]
+    record=[]
+    spliceIndex=False
+    for i in range(len(splitCstr)):
+        sub=splitCstr[i]
+        status=sub[0]
+        entry=sub[1:]
+        if status == '=':
+            for item in entry:
+                genomePosition+=1
+                record.append((status,item))
+                if start<=genomePosition<=end:
+                    spliceIndex=len(record)
+        if status == '+':
+            for item in entry:
+                record.append((status,item))
+        if status == '-':
+            for item in entry:
+                genomePosition+=1
+                record.append((status,item))
+                if start<=genomePosition<=end:
+                    spliceIndex=len(record)
+        if status == '*':
+            for item in entry[::2]:
+                genomePosition+=1
+                record.append((status,item))
+                if start<=genomePosition<=end:
+                    spliceIndex=len(record)
+        if status == '~':
+            intronLength=int(entry[2:-2])
+            genomePosition+=intronLength
+            record.append('|'+entry+'|')
+            if start<=genomePosition<=end:
+                  spliceIndex=len(record)
+    bases='nnnn'
+    left=''
+    right=''
+
+    if spliceIndex:
+        for index in range(max(spliceIndex-10,0),min(spliceIndex+10,len(record))):
+            item=record[index]
+            if '|' in item:
+               bases=item[1:3]+item[-3:-1]
+               left = record[index-2:index]
+               right = record[index+1:index+3]
+    return bases,left,right
+
 def scan_for_best_bin(entry, dist_range, density_dict, peak_areas, chrom, side):
     best_extra_list, peak_center = 0, 0
     cov_area = {}
     best_dirs = {'+': 0, '-': 0}
+    best_names = []
     for x in dist_range:
         extra_list_exp = 0
         dirs = {'+': 0, '-': 0}
+        names=[]
         cov_set = {}
         called = False
         for y in dist_range:
@@ -55,6 +194,7 @@ def scan_for_best_bin(entry, dist_range, density_dict, peak_areas, chrom, side):
                 for item in density_dict[entry + x + y]:
                     extra_list_exp += 1
                     dirs[item[4]] += 1
+                    names.append(item[0])
                     for covered_position in item[3]:
                         if covered_position not in cov_set:
                             cov_set[covered_position] = 0
@@ -62,11 +202,12 @@ def scan_for_best_bin(entry, dist_range, density_dict, peak_areas, chrom, side):
 
         if extra_list_exp > best_extra_list:
             best_extra_list = extra_list_exp
+            best_names=names
             peak_center = entry + x
             cov_area = cov_set
             best_dirs = dirs
 
-    return best_extra_list, peak_center, cov_area, best_dirs
+    return best_extra_list, peak_center, cov_area, best_dirs,best_names
 
 
 def determine_cov(cov_area, chrom, reverse, peak_center, histo_cov):
@@ -101,11 +242,11 @@ def myround(x, base=10):
     return int(base * round(float(x) / base))
 
 
-def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_areas, chrom):
+def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_areas, chrom, CigarDict):
     if reverse:
-        dist_range = range(splice_site_width, -splice_site_width, -1)
+        dist_range = range(splice_site_width, -splice_site_width-1, -1)
     else:
-        dist_range = range(-splice_site_width, splice_site_width)
+        dist_range = range(-splice_site_width, splice_site_width+1)
 
     entry_list = []
     for entry in density_dict:
@@ -116,7 +257,7 @@ def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_
             break
         if entry in peak_areas[chrom][side]:
             continue
-        best_extra_list, peak_center, cov_area, best_dirs = scan_for_best_bin(entry, dist_range, density_dict, peak_areas, chrom, side)
+        best_extra_list, peak_center, cov_area, best_dirs,best_names = scan_for_best_bin(entry, dist_range, density_dict, peak_areas, chrom, side)
 
         cov, cov_area = determine_cov(cov_area, chrom, reverse, peak_center, histo_cov)
 
@@ -136,20 +277,24 @@ def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_
                 if not Type:
                     continue
                 peaks += 1
-                out.write(chrom + '\t' + str(peak_center - splice_site_width)
-                          + '\t' + str(peak_center + splice_site_width) + '\t'
-                          + str(Type) + side + str(peaks) + '_'
-                          + str(peak_center - splice_site_width) + '_'
-                          + str(peak_center + splice_site_width) + '_'
-                          + str(proportion) + '\t' + str(peaks) + '\n')
-                for base in range(peak_center - splice_site_width, peak_center + splice_site_width + 1):
-                    peak_areas[chrom][side][base] = 1
+                passed = characterize_splicing_event([chrom, peak_center - splice_site_width, peak_center + splice_site_width], best_names, CigarDict)
+                if passed:
+                    out.write(chrom + '\t' + str(peak_center - splice_site_width)
+                              + '\t' + str(peak_center + splice_site_width) + '\t'
+                              + str(Type) + side + str(peaks) + '_'
+                              + str(peak_center - splice_site_width) + '_'
+                              + str(peak_center + splice_site_width) + '_'
+                              + str(proportion) + '\t' + str(peaks) + '\n')
+                    for base in range(peak_center - splice_site_width, peak_center + splice_site_width + 1):
+                        peak_areas[chrom][side][base] = 1
+
 
     return peaks, peak_areas
 
 
-def collect_reads(reads, sam_file, dir_dict, target_chrom):
-    histo_left_bases, histo_right_bases, histo_cov = {}, {}, {}
+def collect_reads(reads, sam_file, dir_dict, target_chrom,readAccuracy):
+
+    histo_cov, histo_left_bases, histo_right_bases = {}, {}, {}
     histo_cov[target_chrom] = {}
     histo_left_bases[target_chrom] = {}
     histo_right_bases[target_chrom] = {}
@@ -161,7 +306,6 @@ def collect_reads(reads, sam_file, dir_dict, target_chrom):
         dirn = a[8]
         if name in dir_dict:
             dirn = dir_dict[name]
-
         length = int(a[10])
         begin, span = int(a[15]), int(a[16])
         blocksizes = a[18].split(',')[:-1]
@@ -169,6 +313,7 @@ def collect_reads(reads, sam_file, dir_dict, target_chrom):
         cov_set = set()
         low_bounds, up_bounds = [], []
         aligned_bases = 0
+        accuracy=readAccuracy[name]
         for x in range(0, len(blocksizes)):
             blockstart = int(blockstarts[x])
             blocksize = int(blocksizes[x])
@@ -190,16 +335,16 @@ def collect_reads(reads, sam_file, dir_dict, target_chrom):
                 histo_cov[chrom][rounded] = 0
             histo_cov[chrom][rounded] += 1
 
-        if aligned_bases / length <= 0.70:
+        if accuracy<0.9:
             continue
         for low_bound in low_bounds:
             if low_bound not in histo_left_bases[chrom]:
                 histo_left_bases[chrom][low_bound] = []
-            histo_left_bases[chrom][low_bound].append([0, begin, span, cov_set, dirn])
+            histo_left_bases[chrom][low_bound].append([name, begin, span, cov_set, dirn,accuracy,round(aligned_bases,-2)])
         for up_bound in up_bounds:
             if up_bound not in histo_right_bases[chrom]:
                 histo_right_bases[chrom][up_bound] = []
-            histo_right_bases[chrom][up_bound].append([0, begin, span, cov_set, dirn])
+            histo_right_bases[chrom][up_bound].append([name, begin, span, cov_set, dirn,accuracy,round(aligned_bases,-2)])
 
     return histo_left_bases, histo_right_bases, histo_cov
 
@@ -275,11 +420,11 @@ def make_genome_bins(bounds, side, peaks, chrom, peak_areas):
                         if x != 0:
                             start = int(sub_list[x] - ((sub_list[x] - sub_list[x - 1]) / 2))
                         else:
-                            start = int(sub_list[x]) - 1
+                            start = int(sub_list[x]) - splice_site_width
                         if x != len(sub_list) - 1:
                             end = int(sub_list[x] + ((sub_list[x + 1] - sub_list[x]) / 2))
                         else:
-                            end = int(sub_list[x]) + 1
+                            end = int(sub_list[x]) + splice_site_width
 
                         out.write(chrom + '\t' + str(start) + '\t' + str(end)
                                   + '\t' + type1 + side + str(peaks) + '_'
@@ -347,6 +492,53 @@ def split_reads(infile,chrom_list):
         chrom_list.add(chrom)
     return readDict, chrom_list
 
+
+def characterize_splicing_event(a,names,CigarDict):
+    passed = False
+    chromosome = a[0]
+    splice_left = int(a[1])
+    splice_right = int(a[2])
+    readDict = []
+    CIGARs=[]
+    for name in names:
+        CIGARs.append(CigarDict[name])
+    basecontext={}
+    basecontext['gtag']=0
+    basecontext['all']=0
+    leftCS={}
+    leftCS['Total']=0
+    rightCS={}
+    rightCS['Total']=0
+    for status in ['*','+','-','=','|']:
+        leftCS[status]=0
+        rightCS[status]=0
+    for CIGAR in CIGARs:
+        bases,left,right = getCSaroundSS(CIGAR,splice_left,splice_right)
+        basecontext['all'] += 1
+        if bases == 'gtag' or bases == 'ctac':
+            basecontext['gtag'] += 1
+        else:
+            if bases not in basecontext:
+                basecontext[bases]=0
+            basecontext[bases]+=1
+        if left:
+            for thing in left:
+                leftstatus = thing[0]
+                leftCS[leftstatus]+=1
+                leftCS['Total']+=1
+        if right:
+            for thing in right:
+                rightstatus = thing[0]
+                rightCS[rightstatus]+=1
+                rightCS['Total']+=1
+
+
+    if basecontext['gtag']/basecontext['all']>0.95:
+        if leftCS['=']/leftCS['Total']>0.95 and rightCS['=']/rightCS['Total']>0.95:
+            passed = True
+    return passed
+
+
 def main():
     left_bounds, right_bounds = {}, {}
     if genome_file!='None':
@@ -359,7 +551,7 @@ def main():
 
     outPolyA=open(out_path+'/polyAWhiteList.bed','w')
     if white_list_polyA=='1':
-        print(len(polyAWhiteList), 'poly(A) sites whitelisted')
+        print('\t'+str(len(polyAWhiteList)), 'poly(A) sites whitelisted')
         for chrom,direction,end,transcript_id in polyAWhiteList:
             polyA=int(end)
             polyAstart=polyA-20
@@ -372,13 +564,12 @@ def main():
     dir_dict = get_alignment_dir(sam_file)
     print('\tloading reads')
     readDict, chrom_list = split_reads(infile, chrom_list)
-
+    print('\tcalculating read accuracy')
+    readAccuracy,CigarDict  = readSAM(sam_file)
     peak_areas = {}
-    print(sorted(list(chrom_list)))
     for chrom in sorted(list(chrom_list)):
         print('\tnow processing ', chrom)
-        print('\t\tparsing reads')
-        histo_left_bases, histo_right_bases, histo_cov = collect_reads(readDict[chrom], sam_file, dir_dict, chrom)
+        histo_left_bases, histo_right_bases, histo_cov = collect_reads(readDict[chrom], sam_file, dir_dict, chrom, readAccuracy)
 
         peak_areas[chrom] = {}
         peak_areas[chrom]['l'] = {}
@@ -393,21 +584,24 @@ def main():
             Left_Peaks, peak_areas = make_genome_bins(left_bounds[chrom], 'l', Left_Peaks, chrom, peak_areas)
             Right_Peaks, peak_areas = make_genome_bins(right_bounds[chrom], 'r', Right_Peaks, chrom, peak_areas)
 
-            print(
-                '\t\tparsed annotation-based splice-sites',
-                Left_Peaks - Left_Peaks_old,
-                Right_Peaks - Right_Peaks_old,
-            )
+#            print(
+#                '\t\tparsed annotation-based splice-sites',
+#                Left_Peaks - Left_Peaks_old,
+#                Right_Peaks - Right_Peaks_old,
+#            )
         Left_Peaks_old = Left_Peaks
         Right_Peaks_old = Right_Peaks
-        Left_Peaks, peak_areas = find_peaks(histo_left_bases[chrom], out, Left_Peaks, True, cutoff, histo_cov, 'l', peak_areas, chrom)
-        Right_Peaks, peak_areas = find_peaks(histo_right_bases[chrom], out, Right_Peaks, False, cutoff, histo_cov, 'r', peak_areas, chrom)
+        Left_Peaks, peak_areas = find_peaks(histo_left_bases[chrom], out, Left_Peaks, True, cutoff, histo_cov, 'l', peak_areas, chrom,CigarDict)
+        Right_Peaks, peak_areas = find_peaks(histo_right_bases[chrom], out, Right_Peaks, False, cutoff, histo_cov, 'r', peak_areas, chrom, CigarDict)
 
-        print(
-            '\t\tdetected read-based splice-sites',
-            Left_Peaks - Left_Peaks_old,
-            Right_Peaks - Right_Peaks_old,
-        )
+#        print(
+#            '\t\tdetected read-based splice-sites',
+#            Left_Peaks - Left_Peaks_old,
+#            Right_Peaks - Right_Peaks_old,
+#        )
+
+    out.close()
+
 
 
 main()

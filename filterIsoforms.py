@@ -219,6 +219,8 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
             filtered_isoforms.append(isoform)
         else:
             show = False
+            if 'Isoform_293_35' in isoform:
+                show=True
             decision = True
             if show:
                 print('status', status)
@@ -340,6 +342,7 @@ def parse_clean_psl(psl_file, target_chromosome):
     psl_info = {}
     isoform_list = []
     first_alignment = {}
+    doneSet=set()
     for line in open(psl_file):
         a = line.strip().split('\t')
 
@@ -359,6 +362,9 @@ def parse_clean_psl(psl_file, target_chromosome):
             overhang5 = int(a[10]) - int(a[12])
 
         name = a[9]
+        if name in doneSet:
+            continue
+        doneSet.add(name)
         abundance = int(a[9].split('_')[-1])
         if readlength >= minimum_isoform_length:
             if abundance >= minimum_reads:
@@ -437,11 +443,11 @@ def psl_to_gtf(psl_file,gtf_file):
     This way it accomodates format definitions and coordinate systems.
     '''
     out=[]
+    doneDict=set()
     for line in open(psl_file):
         a = line.strip().split('\t')
         direction, name, chromosome, start, end=a[8], a[9], a[13], int(a[15]), int(a[16])
         blocksizes, blockstarts, readstarts = a[18].split(',')[:-1], a[20].split(',')[:-1],a[19].split(',')[:-1]
-
         out_tmp=[]
         out_tmp.append('%s\t%s\ttranscript\t%s\t%s\t.\t%s\t.\ttranscript_id "%s"; gene_id "%s.gene"; gene_name "%s"\n' % (chromosome,'hg38',int(start)+1,end,direction,name,name,name))
         for index in np.arange(0,len(blocksizes),1):
@@ -449,7 +455,6 @@ def psl_to_gtf(psl_file,gtf_file):
             blockend=str(int(blockstarts[index])+int(blocksizes[index]))
             out_tmp.append('%s\t%s\texon\t%s\t%s\t.\t%s\t.\ttranscript_id "%s"; gene_id "%s.gene"; gene_name "%s"\n' % (chromosome,'hg38',int(blockstart)+1,blockend,direction,name,name,name))
         out.append(out_tmp)
-
     gtf_handle=open(gtf_file,'w')
     for transcript in out:
         for feature in transcript:
@@ -458,36 +463,35 @@ def psl_to_gtf(psl_file,gtf_file):
 
 
 def main(infile):
-    print('reading genome sequence to determine A content of putative polyA sites')
+    print('\treading genome sequence to determine A content of putative polyA sites')
     genome_sequence = read_fasta(genome)
-    print('aligning isoform consensus sequences')
+    print('\taligning isoform consensus sequences')
     processed_isoforms = path + 'Isoforms_full_length_consensus_reads.fasta'
     isoforms = read_fasta(processed_isoforms)
     sam_file = path + '/Isoforms.aligned.out.sam'
     psl_file = path + '/Isoforms.aligned.out.psl'
     clean_psl_file = path + '/Isoforms.aligned.out.clean.psl'
-    print('%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
-    os.system('%s -G 400k --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
+    os.system('%s -G 400k -uf --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
     os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
     os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
-    print('collecting chromosomes')
+    print('\tcollecting chromosomes')
     chromosomes = collect_chromosomes(clean_psl_file)
     for chromosome in chromosomes:
-        print(chromosome)
+        print('\tnow processing chromosome',chromosome)
         sys.stderr.write(chromosome + '\n')
-        print('reading polyA white list')
+#        print('reading polyA white list')
         polyAWhiteList=readWhiteList(polyAWhiteListFile,chromosome)
-        print('reading in isoforms and applying absolute filters for abundance, lengths, and overhangs')
+#        print('reading in isoforms and applying absolute filters for abundance, lengths, and overhangs')
         psl_dict, psl_info, isoform_list = parse_clean_psl(clean_psl_file, chromosome)
-        print('getting isoform loci read counts')
+#        print('getting isoform loci read counts')
         count = get_count(isoform_list, chromosome, psl_dict)
-        print('filtering isoforms for relative read coverage starting with', len(isoform_list), 'isoforms')
+#        print('filtering isoforms for relative read coverage starting with', len(isoform_list), 'isoforms')
         isoform_list = filter_isoforms(count, isoform_list, chromosome, psl_info, overhangs, minimum_isoform_length)
-        print('finding fully contained isoforms in', len(isoform_list), 'remaining isoforms')
+#        print('finding fully contained isoforms in', len(isoform_list), 'remaining isoforms')
         isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList)
-        print('writing', len(isoform_list), 'isoforms to file')
+#        print('writing', len(isoform_list), 'isoforms to file')
         write_isoforms(isoform_list, isoforms, psl_info)
-    print('converting psl output to gtf output')
+#    print('converting psl output to gtf output')
     psl_to_gtf(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl',path + '/Isoform_Consensi_filtered.aligned.out.clean.gtf')
 
 main(infile)

@@ -18,7 +18,7 @@ parser.add_argument('--subreads', '-b', type=str, action='store')
 parser.add_argument('--fasta_files', '-f', type=str, action='store')
 parser.add_argument('--minimum_feature_count', '-n', type=int, action='store')
 parser.add_argument('--minimum_read_count', '-R', type=int, action='store')
-
+parser.add_argument('--consensusMode', '-C', type=str, default='P', action='store')
 
 
 if len(sys.argv) == 1:
@@ -33,7 +33,7 @@ subreads = args.subreads
 fasta_files = args.fasta_files
 minimum_feature_count = args.minimum_feature_count
 minimum_read_count = args.minimum_read_count
-
+consensusMode = args.consensusMode
 
 
 if '.fofn' in fasta_files:
@@ -326,11 +326,12 @@ def main():
     start_end_dict, start_end_dict_mono = sort_reads_into_splice_junctions(splice_dict, fastaList, infile)
     print('\tdefining isoforms')
     subread_pointer = define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
-    print('\treading subreads')
 
-    for subread_file in subreadList:
-        print('    ' + subread_file)
-        read_subreads(subread_file, subread_pointer)
+    if 'C' in consensusMode:
+        print('\n\treading subreads from files:')
+        for subread_file in subreadList:
+            print('\t' + subread_file)
+            read_subreads(subread_file, subread_pointer)
 
 
 if __name__ == '__main__':
