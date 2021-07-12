@@ -567,8 +567,11 @@ def main():
     print('\tcalculating read accuracy')
     readAccuracy,CigarDict  = readSAM(sam_file)
     peak_areas = {}
+    numberOfChromosomes=str(len(chrom_list))
+    currentChromosome=0
     for chrom in sorted(list(chrom_list)):
-        print('\tnow processing ', chrom)
+        currentChromosome+=1
+        print('\tnow processing', chrom, '('+str(currentChromosome)+'/'+numberOfChromosomes+')',' '*60, end='\r')
         histo_left_bases, histo_right_bases, histo_cov = collect_reads(readDict[chrom], sam_file, dir_dict, chrom, readAccuracy)
 
         peak_areas[chrom] = {}
@@ -601,7 +604,7 @@ def main():
 #        )
 
     out.close()
-
+    print('\n')
 
 
 main()
