@@ -8,7 +8,7 @@ import argparse
 import mappy as mp
 
 
-VERSION = 'v3.6.1 - This is the way'
+VERSION = 'v3.6.1 - This is the Isoform'
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

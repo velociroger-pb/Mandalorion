@@ -12,12 +12,12 @@ parser.add_argument('-f', '--fasta_files', type=str, help='comma separate list o
 args = parser.parse_args()
 mandalorion_folder=args.mandalorion_output_folder
 fasta_files=args.fasta_files
-filtered_isoforms=mandalorion_folder+'/Isoform_Consensi_filtered.aligned.out.clean.psl'
+filtered_isoforms=mandalorion_folder+'/Isoforms.filtered.clean.psl'
 isoform_long_names=mandalorion_folder+'/Isoform_long_names.txt'
 isoform_list=mandalorion_folder+'/isoform_list'
 read_location=mandalorion_folder+'/read_locations.txt'
 out=open(mandalorion_folder+'/reads2isoforms.txt','w')
-outq=open(mandalorion_folder+'/quantifiedIsoforms.txt','w')
+outq=open(mandalorion_folder+'/Isoforms.filtered.clean.quant','w')
 
 def read_gtf_file(gtf_file):
     gene_dict={}
@@ -105,7 +105,6 @@ def mapReadLocation(fastaList):
     sampleList=[]
     readMapDict={}
     for line in fastaList:
-        print(line)
         location=line.strip()
         sampleList.append(location)
         reads=read_fasta(location)
@@ -127,7 +126,7 @@ else:
     fastaList=fasta_files.split(',')
 
 sampleList,readMapDict=mapReadLocation(fastaList)
-print(sampleList)
+
 short2longDict=read_isoform_long_names(isoform_long_names)
 long2locationDict=read_isoform_list(isoform_list)
 read_filtered_isoforms(filtered_isoforms,short2longDict,long2locationDict,sampleList,readMapDict)#,geneDict,geneSymbols)

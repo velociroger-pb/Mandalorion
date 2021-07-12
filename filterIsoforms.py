@@ -97,8 +97,8 @@ else:
 
 consensus = 'python3 ' + consensus
 
-out2 = open(path + '/Isoform_Consensi_filtered.fasta', 'w')
-out3 = open(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl', 'w')
+out2 = open(path + '/Isoforms.filtered.fasta', 'w')
+out3 = open(path + '/Isoforms.filtered.clean.psl', 'w')
 polyAWhiteListFile=path + '/polyAWhiteList.bed'
 
 def read_fasta(inFile):
@@ -476,8 +476,11 @@ def main(infile):
     os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
     print('\tcollecting chromosomes')
     chromosomes = collect_chromosomes(clean_psl_file)
+    numberOfChromosomes=str(len(chromosomes))
+    currentChromosome=0
     for chromosome in chromosomes:
-        print('\tnow processing chromosome',chromosome)
+        currentChromosome+=1
+        print('\tnow processing chromosome',chromosome,'('+str(currentChromosome)+'/'+numberOfChromosomes+')', ' '*60, end='\r')
         sys.stderr.write(chromosome + '\n')
 #        print('reading polyA white list')
         polyAWhiteList=readWhiteList(polyAWhiteListFile,chromosome)
@@ -493,5 +496,5 @@ def main(infile):
         write_isoforms(isoform_list, isoforms, psl_info)
 #    print('converting psl output to gtf output')
     psl_to_gtf(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl',path + '/Isoform_Consensi_filtered.aligned.out.clean.gtf')
-
+    print('\n')
 main(infile)
