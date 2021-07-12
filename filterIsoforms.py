@@ -495,6 +495,6 @@ def main(infile):
 #        print('writing', len(isoform_list), 'isoforms to file')
         write_isoforms(isoform_list, isoforms, psl_info)
 #    print('converting psl output to gtf output')
-    psl_to_gtf(path + '/Isoform_Consensi_filtered.aligned.out.clean.psl',path + '/Isoform_Consensi_filtered.aligned.out.clean.gtf')
+    psl_to_gtf(path + '/Isoforms.filtered.clean.psl',path + '/Isoforms.filtered.clean.gtf')
     print('\n')
 main(infile)
