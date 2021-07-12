@@ -94,7 +94,9 @@ python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensu
                         Fastq file(s) with R2C2 subreads, can be entered as a
                         single file path, a comma separated list of file
                         paths, or a path to a file of filenames file (has to
-                        end on .fofn) that contains one file path per line
+                        end on .fofn) that contains one file path per line. 
+                        If Mandalorion is run in consensus mode C, this flag 
+                        doesn't have to be used and is ignored if used
                         
   -O OVERHANGS, --overhangs OVERHANGS
                         Defines bounds for unaligned bases on ends. Format:
@@ -128,7 +130,7 @@ python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensu
                         
   -A ACUTOFF, --Acutoff ACUTOFF
                         Isoforms with A content of more than this cutoff in a
-                        30nt window surrounding their polyA site will be
+                        15nt window downstream of their polyA site will be
                         discarded (default 0.5)
                         
   -W, --white_list_polyA
@@ -156,13 +158,20 @@ python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensu
                         useful if you want to for example filter with
                         different parameters without rerunning the whole
                         pipeline
-                        
+
+  -C CONSENSUSMODE, --consensusMode CONSENSUSMODE
+                        Set to P or PC (deault = P). If P, only pyabpoa will
+                        be used to make isoform consensus sequences. If PM,
+                        medaka will be used as well. PC generates slightly
+                        more accurate sequences for R2C2 data but is much slower.
+                        Use P is analyzing PacBio data.
+
   -v, --version         Prints Mandalorion version
 ```
 
 ## Outputs ##
 
-I consider the *Isoform_Consensi_filtered.fasta* file the main output of the Mandalorion pipeline. It contains the polished sequences of all isoforms Mandalorion considers very high confidence. Mandalorion also creates an *Isoform_Consensi_filtered.aligned.out.clean.psl* which contains alignments of those sequences that had small indels removed. This file is easy to upload to the UCSC Genome Browser to inspect. This version of Mandalorion now also generates a *quantifiedIsoforms.txt* file which contains the number of R2C2 reads that associate which each isoform for each given fasta files.
+I consider the *Isoforms.filtered.fasta* file the main output of the Mandalorion pipeline. It contains the polished sequences of all isoforms Mandalorion considers very high confidence. Mandalorion also creates *Isoforms.filtered.clean.psl* and *Isoforms.filtered.clean.gtf* files which contain minimap2 alignments of those sequences that had small indels removed. These files are easy to upload to the UCSC Genome Browser to inspect. This version of Mandalorion now also generates a *Isoforms.filtered.clean.quant* file which contains the number of R2C2 reads that associate which each isoform for each given fasta files.
 
 ## Utils ##
 These are the scripts used to do haplotype phasing and HLA analysis.
