@@ -258,9 +258,9 @@ if 'P' in Modules:
            \nRunning Module P - sam to Psl conversion\
            \n----------------------------------------\n')
 
-    print('\nConverting sam output to psl format\n')
+    print('\tConverting sam output to psl format\n')
     os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
-    print('\nCleaning psl file of small Indels\n')
+    print('\tCleaning psl file of small Indels\n')
     os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
 
 if 'S' in Modules:
@@ -318,11 +318,11 @@ if 'T' in Modules:
            \nRunning Module T - trimming consensus sequences\
            \n-----------------------------------------------\n')
     if adapter and ends:
-        print('\n\tTrimming reads based on adapters and end sequences\n')
+        print('\tTrimming reads based on adapters and end sequences\n')
         os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s'
         % (MandoPath,'postprocessingIsoforms.py', path+'/isoform_tmp.fasta', adapter, path, config_file,ends))
     else:
-        print('\n\tNot Trimming: adapter (-a) and/or ends (-e) not provided.\
+        print('\tNot Trimming: adapter (-a) and/or ends (-e) not provided.\
                \n\tReads are presumed to have been full-length and in the + direction.')
         os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta'))
 

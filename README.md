@@ -2,7 +2,9 @@
 [![Github release](https://img.shields.io/github/tag/christopher-vollmers/Mandalorion-1.svg?label=Version)](https://github.com/christopher-vollmers/Mandalorion-1/tags)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
-Episode III.6: I can bring you in warm or I can bring you in cold.
+## This repository is being heavily modified currently. Stuff should work most of the time but behavior might change somewhat unpredictably. Things should be more stable in September 2021. A stable version of Mandalorion (3.5) lives in Roger Volden's github ##
+
+v3.6.1: This is the Isoform.
 
 Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments. 
 
@@ -13,7 +15,6 @@ PacBio ccs reads (.fastq) and subreads (.bam) files have to be converted (to .fa
 ## Dependencies ##
 
 - [minimap2](https://github.com/lh3/minimap2)
-- [racon](https://github.com/isovic/racon)
 - [emtrey](https://github.com/rvolden/emtrey) ([go](https://golang.org/dl/))
 - [blat source](https://users.soe.ucsc.edu/~kent/src/blatSrc35.zip) or [blat executable](http://hgdownload.soe.ucsc.edu/admin/exe/)
 - [medaka](https://github.com/nanoporetech/medaka)
@@ -171,7 +172,7 @@ python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensu
 
 ## Outputs ##
 
-I consider the *Isoforms.filtered.fasta* file the main output of the Mandalorion pipeline. It contains the polished sequences of all isoforms Mandalorion considers very high confidence. Mandalorion also creates *Isoforms.filtered.clean.psl* and *Isoforms.filtered.clean.gtf* files which contain minimap2 alignments of those sequences that had small indels removed. These files are easy to upload to the UCSC Genome Browser to inspect. This version of Mandalorion now also generates a *Isoforms.filtered.clean.quant* file which contains the number of R2C2 reads that associate which each isoform for each given fasta files.
+I consider the *Isoforms.filtered.fasta* file the main output of the Mandalorion pipeline. It contains the polished sequences of all isoforms Mandalorion considers very high confidence. Mandalorion also creates *Isoforms.filtered.clean.psl* and *Isoforms.filtered.clean.gtf* files which contain minimap2 alignments of those sequences that had small indels removed. These files are easy to upload to the UCSC Genome Browser to inspect. This version of Mandalorion now also generates a *Isoforms.filtered.clean.quant* file which contains the number of R2C2/PacBio reads that associate which each isoform for each given fasta files.
 
 ## Utils ##
 These are the scripts used to do haplotype phasing and HLA analysis.

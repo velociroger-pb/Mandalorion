@@ -213,7 +213,7 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
     for identity in sorted(start_end_dict):
         counter += 1
         print('\tprocessing reads assigned to spliceform ', counter,
-              ' of ', number_of_isoforms, ' into isoforms', end='\r')
+              ' of ', number_of_isoforms, ' to generate isoform models', end='\r')
         starts, ends = [], []
         ends = []
         positions = start_end_dict[identity]
@@ -288,7 +288,7 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
             # for subread, sequence, qual in subread_list:
             #     out_reads_subreads.write(subread + '\n' + sequence
             #                              + '\n+\n' + qual + '\n')
-
+    print('\n\tfinished generating isoforms models'
     out = open(individual_path + 'isoform_list', 'a')
     for item,repeats in file_set.items():
         if repeats >= minimum_read_count:
@@ -328,7 +328,7 @@ def main():
     subread_pointer = define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
 
     if 'C' in consensusMode:
-        print('\n\treading subreads from files:')
+        print('\treading subreads from files:')
         for subread_file in subreadList:
             print('\t' + subread_file)
             read_subreads(subread_file, subread_pointer)
