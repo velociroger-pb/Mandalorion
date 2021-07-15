@@ -288,7 +288,7 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
             # for subread, sequence, qual in subread_list:
             #     out_reads_subreads.write(subread + '\n' + sequence
             #                              + '\n+\n' + qual + '\n')
-    print('\n\tfinished generating isoforms models'
+    print('\n\tfinished generating isoforms models')
     out = open(individual_path + 'isoform_list', 'a')
     for item,repeats in file_set.items():
         if repeats >= minimum_read_count:
