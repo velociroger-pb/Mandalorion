@@ -41,7 +41,7 @@ python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensu
 ```bash
   -c CONFIG_FILE, --config_file CONFIG_FILE
                         Tab delimited file that specifies where minimap, blat,
-                        emtrey, and racon executables are
+                        and emtrey executables are
                         
   -p PATH, --path PATH  Directory to put output files into
   
