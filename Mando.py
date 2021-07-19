@@ -6,6 +6,7 @@ import sys
 import os
 import argparse
 import mappy as mp
+from time import localtime, strftime
 
 
 VERSION = 'v3.6.1 - This is the Isoform'
@@ -154,6 +155,7 @@ args = parser.parse_args()
 
 config_file = args.config_file
 path = args.path + '/'  # path where you want your output files to go
+temp_path = path + '/tmp/'
 upstream_buffer = args.upstream_buffer
 downstream_buffer = args.downstream_buffer
 subsample_consensus = args.subsample_consensus
@@ -189,6 +191,18 @@ else:
 
 if not os.path.isdir(path):
     os.system('mkdir %s' % path)
+    command=open(path+'/Mando.log','w')
+else:
+    command=open(path+'/Mando.log','a')
+
+command.write('\nMandalorion "'+ VERSION +'" was run on '\
+               + strftime("%Y-%m-%d %H:%M:%S", localtime())+'\n'\
+               + 'with the following parameters\n'\
+               + str(args).replace('Namespace(','').replace(')','') + '\n')
+command.close()
+if not os.path.isdir(temp_path):
+    os.system('mkdir %s' % temp_path)
+
 
 
 def configReader(configIn):
@@ -230,12 +244,12 @@ print('\n-----------------------------------------------------\
 
 
 if not sam_file:
-    sam_file = path + '/mm2Alignments.sam'
+    sam_file = temp_path + '/mm2Alignments.sam'
     if 'A' in Modules:
         print('\n----------------------------\
                \nRunning Module A - Alignment\
                \n----------------------------\n')
-        tempFasta=path+'/Combined.fasta'
+        tempFasta=temp_path+'/Combined.fasta'
         out=open(tempFasta,'w')
         for fasta in fastaList:
             for name,seq,qual in mp.fastx_read(fasta):
@@ -251,8 +265,8 @@ else:
     print('\n\n**********  sam file provided. Using those alignments instead of aligning the reads in fasta file(s)  **********\n\n')
 
 
-psl_file = path + '/mm2Alignments.psl'
-clean_psl_file = path + '/mm2Alignments.clean.psl'
+psl_file = temp_path + '/mm2Alignments.psl'
+clean_psl_file = temp_path + '/mm2Alignments.clean.psl'
 if 'P' in Modules:
     print('\n----------------------------------------\
            \nRunning Module P - sam to Psl conversion\
@@ -272,8 +286,8 @@ if 'S' in Modules:
         % (
             MandoPath,
             clean_psl_file,
-            path,
-            '0.2',
+            temp_path,
+            '0.1',
             genome_annotation,
             'g',
             sam_file,
@@ -294,7 +308,7 @@ if 'D' in Modules:
         % (
             MandoPath,
             clean_psl_file,
-            path,
+            temp_path,
             downstream_buffer,
             upstream_buffer,
             subreads,
@@ -310,7 +324,7 @@ if 'C' in Modules:
            \n-----------------------------------------------\n')
     os.system(
         'python3 %s/createConsensi.py -p %s -s %s -c %s -n %s -C %s'
-        % (MandoPath,path, subsample_consensus, config_file, minimap2_threads, consensusMode)
+        % (MandoPath,temp_path, subsample_consensus, config_file, minimap2_threads, consensusMode)
     )
 
 if 'T' in Modules:
@@ -320,11 +334,11 @@ if 'T' in Modules:
     if adapter and ends:
         print('\tTrimming reads based on adapters and end sequences\n')
         os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s'
-        % (MandoPath,'postprocessingIsoforms.py', path+'/isoform_tmp.fasta', adapter, path, config_file,ends))
+        % (MandoPath,'postprocessingIsoforms.py', temp_path+'/isoform_tmp.fasta', adapter, temp_path, config_file,ends))
     else:
         print('\tNot Trimming: adapter (-a) and/or ends (-e) not provided.\
-               \n\tReads are presumed to have been full-length and in the + direction.')
-        os.system('scp %s %s' % (path+'/isoform_tmp.fasta',path + 'Isoforms_full_length_consensus_reads.fasta'))
+               \n\tReads are presumed to have been full-length, trimmed, and in the + direction.')
+        os.system('scp %s %s' % (temp_path + '/isoform_tmp.fasta',temp_path + 'Isoforms_full_length_consensus_reads.fasta'))
 
 if 'F' in Modules:
     print('\n-------------------------------------\
@@ -336,8 +350,8 @@ if 'F' in Modules:
             -O %s -t %s -A %s -s %s -d %s -I %s -m %s 2> %s'
         % (
             MandoPath,
-            path,
-            path + '/Isoform_Consensi.fasta',
+            temp_path,
+            temp_path + '/Isoform_Consensi.fasta',
             minimum_ratio,
             minimum_reads,
             minimum_internal_ratio,
@@ -350,15 +364,16 @@ if 'F' in Modules:
             downstream_buffer,
             minimum_isoform_length,
             MandoPath,
-            path + '/filter_reasons.txt',
+            temp_path + '/filter_reasons.txt',
         )
     )
-
+    os.system('scp ' + temp_path + '/Isoforms.filtered.* ' + path)
 if 'Q' in Modules:
     print('\n---------------------------------------\
            \nRunning Module Q - quantifying isoforms\
            \n---------------------------------------\n')
     os.system(
         'python3 %s/assignReadsToIsoforms.py -m %s -f %s'
-        % (MandoPath,path, fasta_files)
+        % (MandoPath,temp_path, fasta_files)
     )
+    os.system('scp ' + temp_path + '/Isoforms.filtered.clean.quant ' + path)

@@ -243,10 +243,10 @@ def myround(x, base=10):
 
 
 def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_areas, chrom, CigarDict):
-    if reverse:
-        dist_range = range(splice_site_width, -splice_site_width-1, -1)
-    else:
-        dist_range = range(-splice_site_width, splice_site_width+1)
+    dist_range=[0]
+    for shift in range(1,splice_site_width+1):
+        dist_range.append(shift)
+        dist_range.append(-shift)
 
     entry_list = []
     for entry in density_dict:
@@ -279,6 +279,7 @@ def find_peaks(density_dict, out, peaks, reverse, cutoff, histo_cov, side, peak_
                 peaks += 1
                 passed = characterize_splicing_event([chrom, peak_center - splice_site_width, peak_center + splice_site_width], best_names, CigarDict)
                 if passed:
+
                     out.write(chrom + '\t' + str(peak_center - splice_site_width)
                               + '\t' + str(peak_center + splice_site_width) + '\t'
                               + str(Type) + side + str(peaks) + '_'
@@ -532,8 +533,10 @@ def characterize_splicing_event(a,names,CigarDict):
                 rightCS[rightstatus]+=1
                 rightCS['Total']+=1
 
-
+    basepass = False
     if basecontext['gtag']/basecontext['all']>0.95:
+        basepass = True
+    if basepass:
         if leftCS['=']/leftCS['Total']>0.95 and rightCS['=']/rightCS['Total']>0.95:
             passed = True
     return passed
