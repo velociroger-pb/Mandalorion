@@ -112,9 +112,14 @@ parser.add_argument(
             window surrounding their polyA site will be discarded (default 0.5)'''
 )
 parser.add_argument(
-    '-W', '--white_list_polyA', action='store_const', const='1',default='0',
+    '-W', '--white_list_polyA', type=str, default='0',
     help='''If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
-            Annotated transcript ends will be  taken from annotation file given with -g'''
+            Annotated transcript ends will be  taken from annotation file given with -g. 
+            Only transcripts having one of the provided comma separated values in the line of their exon features will be used.
+            E.g. setting -W to [SIRV,"basic"] will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
+            Setting -W to [exon] should include all transcripts in the gtf file. 
+            This is feature only checks whether the provided values are in the line, not where they are. 
+            That means that setting -W to [chr1] will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous'''
 )
 
 parser.add_argument(

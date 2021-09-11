@@ -34,6 +34,8 @@ fasta_files = args.fasta_files
 minimum_feature_count = args.minimum_feature_count
 minimum_read_count = args.minimum_read_count
 consensusMode = args.consensusMode
+extend=True
+outbed = open(path + 'start_end.bed', 'w')
 
 
 if '.fofn' in fasta_files:
@@ -54,8 +56,13 @@ else:
     subreadList=subreads.split(',')
 
 
-def find_peaks(starts, ends):
+def find_peaks(starts, ends, identity, count_dict):
     start_peaks, end_peaks = {}, {}
+    if '+' in identity:
+        count_dict['+'].add(identity)
+    else:
+        count_dict['-'].add(identity)
+
 
     start_count = {}
     end_count = {}
@@ -69,29 +76,162 @@ def find_peaks(starts, ends):
             end_count[position] = 0
         end_count[position] += 1
 
+    show=False
+    if '5l5292' in identity:
+        show=True
+
+
     for position in sorted(starts):
-        if position not in start_peaks:
+        if position - upstream_buffer not in start_peaks:
             window_count = 0
-            for i in range(0, 10, 1):
+            for i in np.arange(0,10):
                 window_position = position + i
                 if window_position in start_count:
                     window_count += start_count[window_position]
             if window_count >= minimum_feature_count:
+                original_bin=[]
                 for shift in np.arange(-upstream_buffer, downstream_buffer):
                     start_peaks[position + shift] = position
+                    original_bin.append(position + shift)
+                if extend:
+                    bins=[]
+                    for i in np.arange(min(original_bin),max(original_bin)):
+                        bin=0
+                        for shift in np.arange(0,10):
+                            if i+shift in start_count:
+                                 bin+=start_count[i+shift]
+                        bins.append(bin)
+
+                    best_bin=max(bins)
+                    extended=True
+                    adjacent=position - upstream_buffer
+                    while extended:
+                        window_count=0
+                        adjacent_list=[]
+                        for i in np.arange(1,11):
+                            adjacent_pos = adjacent - i
+                            adjacent_list.append(adjacent_pos)
+                            if adjacent_pos in start_count:
+                                window_count += start_count[adjacent_pos]
+                        if best_bin > window_count >= minimum_feature_count:
+                            for element in adjacent_list:
+                                if element not in start_peaks:
+                                    start_peaks[element] = position
+                                    original_bin.append(element)
+                                else:
+                                    extended=False
+                        else:
+#                            if window_count > best_bin:
+#                                print(window_count, best_bin, identity)
+                            extended=False
+                        adjacent = adjacent_pos
+                        if extended:
+                            count_dict['start_left'].add(identity)
+
+                    extended = True
+                    adjacent = position + downstream_buffer - 1
+                    while extended:
+                        window_count=0
+                        adjacent_list=[]
+                        for i in np.arange(1,11):
+                            adjacent_pos = adjacent + i
+                            adjacent_list.append(adjacent_pos)
+                            if adjacent_pos in start_count:
+                                window_count += start_count[adjacent_pos]
+                        if best_bin > window_count >= minimum_feature_count:
+                            for element in adjacent_list:
+                                if element not in start_peaks:
+                                    start_peaks[element] = position
+                                    original_bin.append(element)
+                                else:
+                                     extended=False
+                        else:
+#                            if window_count > best_bin:
+#                                print(identity)
+                            extended=False
+                        adjacent = adjacent_pos
+                        if extended:
+                            count_dict['start_right'].add(identity)
+                outbed.write(identity.split('_')[0]+'\t'+str(max(0,min(original_bin)))+'\t'+str(max(original_bin))+'\t'+identity+'\n')
 
     for position in sorted(ends, reverse=True):
-        if position not in end_peaks:
+        if position + upstream_buffer -1 not in end_peaks:
             window_count = 0
-            for i in range(0, 10, 1):
+            for i in np.arange(0,10):
                 window_position = position - i
                 if window_position in end_count:
                     window_count += end_count[window_position]
             if window_count >= minimum_feature_count:
+                original_bin=[]
                 for shift in np.arange(-downstream_buffer, upstream_buffer):
                     end_peaks[position + shift] = position
+                    original_bin.append(position + shift)
+                if extend:
+                    bins=[]
+                    for i in np.arange(min(original_bin),max(original_bin)):
+                        bin=0
+                        for shift in np.arange(0,10):
+                            if i+shift in end_count:
+                                 bin+=end_count[i+shift]
+                        bins.append(bin)
 
-    return start_peaks, end_peaks
+                    best_bin=max(bins)
+                    extended = True
+                    adjacent = position - downstream_buffer
+                    while extended:
+                        window_count=0
+                        adjacent_list=[]
+                        for i in np.arange(1,11):
+                            adjacent_pos = adjacent - i
+                            adjacent_list.append(adjacent_pos)
+                            if adjacent_pos in end_count:
+                                window_count += end_count[adjacent_pos]
+                        if best_bin > window_count >= minimum_feature_count:
+                            for element in adjacent_list:
+                                if element not in end_peaks:
+                                    end_peaks[element] = position
+                                    original_bin.append(element)
+                                else:
+                                    extended=False
+                        else:
+#                            if window_count > best_bin:
+#                                print(identity)
+                            extended=False
+                        adjacent=adjacent_pos
+                        if extended:
+                            count_dict['end_left'].add(identity)
+
+                    extended=True
+                    adjacent=position + upstream_buffer - 1
+                    while extended:
+                        window_count=0
+                        adjacent_list=[]
+                        for i in np.arange(1,11):
+                            adjacent_pos = adjacent + i
+                            adjacent_list.append(adjacent_pos)
+                            if adjacent_pos in end_count:
+                                window_count += end_count[adjacent_pos]
+                        if best_bin > window_count >= minimum_feature_count:
+                            for element in adjacent_list:
+                                if element not in end_peaks:
+                                    original_bin.append(element)
+                                    end_peaks[element] = position
+                                else:
+                                    extended=False
+                        else:
+#                            if window_count > best_bin:
+#                                print(identity)
+                            extended=False
+                        adjacent = adjacent_pos
+                        if extended:
+                            count_dict['end_right'].add(identity)
+                outbed.write(identity.split('_')[0]+'\t'+str(max(0,min(original_bin)))+'\t'+str(max(original_bin))+'\t'+identity+'\n')
+
+
+
+
+
+    return start_peaks, end_peaks, count_dict
 
 
 def collect_splice_events(path):
@@ -210,6 +350,14 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
 
     number_of_isoforms = len(start_end_dict)
     counter = 0
+    count_dict={}
+    count_dict['start_left']=set()
+    count_dict['start_right']=set()
+    count_dict['end_left']=set()
+    count_dict['end_right']=set()
+    count_dict['+']=set()
+    count_dict['-']=set()
+
     for identity in sorted(start_end_dict):
         counter += 1
         print('\tprocessing reads assigned to spliceform ', counter,
@@ -228,7 +376,7 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
             starts.append(int(position[0]))
             ends.append(int(position[1]))
 
-        start_dict, end_dict = find_peaks(starts, ends)
+        start_dict, end_dict, count_dict = find_peaks(starts, ends, identity, count_dict)
         matched_positions = []
         left_extras[identity], right_extras[identity] = {}, {}
         for start, end, read, left_extra, right_extra, read_direction in positions:
@@ -290,6 +438,18 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
             #                              + '\n+\n' + qual + '\n')
     print('\n\tfinished generating isoforms models')
     out = open(individual_path + 'isoform_list', 'a')
+
+    print('start_left',len(count_dict['start_left']))
+    print('start_right',len(count_dict['start_right']))
+    print('end_left',len(count_dict['end_left']))
+    print('end_right',len(count_dict['end_right']))
+
+
+    oute = open(individual_path + 'extended_isoforms', 'w')
+    for spliceform in count_dict['start_right']:
+        oute.write(spliceform+'\n')
+    oute.close()
+
     for item,repeats in file_set.items():
         if repeats >= minimum_read_count:
             out.write(item)

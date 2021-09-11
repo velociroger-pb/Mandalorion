@@ -302,7 +302,7 @@ def main():
                 batch=[]
                 print('\tfinished consensus sequences of', len(counter_list), 'isoforms', end='\r')
         process_batch(batch)
-        print('\tfinished consensus sequences of all isoforms')
+        print('\tfinished consensus sequences of all isoforms                        ')
 
 #    except KeyboardInterrupt:
 #        print('Caught KeyboardInterrupt, terminating workers')

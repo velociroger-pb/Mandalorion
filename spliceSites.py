@@ -32,7 +32,7 @@ refine = args.refine
 sam_file = args.sam_file
 splice_site_width = args.splice_site_width
 minimum_read_count = args.minimum_read_count
-white_list_polyA=args.white_list_polyA
+white_list_polyA=args.white_list_polyA.split(',')
 
 out = open(out_path + '/SS.bed', 'w')
 
@@ -350,11 +350,15 @@ def collect_reads(reads, sam_file, dir_dict, target_chrom,readAccuracy):
     return histo_left_bases, histo_right_bases, histo_cov
 
 
-def parse_genome(input_file, left_bounds, right_bounds):
+def parse_genome(input_file, left_bounds, right_bounds, white_list_polyA):
     polyAWhiteList=[]
     chrom_list = set()
     gene_dict = {}
     for line in open(input_file):
+        pAwl=False
+        for element in white_list_polyA:
+            if element in line:
+                pAwl=True
         a = line.strip().split('\t')
         if len(a) <= 7:
             continue
@@ -362,7 +366,7 @@ def parse_genome(input_file, left_bounds, right_bounds):
             testKey = a[8].split('transcript_id "')[1].split('"')[0]
             if not gene_dict.get(testKey):
                 gene_dict[testKey] = []
-            gene_dict[testKey].append((a[0], a[3], a[4], a[6]))
+            gene_dict[testKey].append((a[0], a[3], a[4], a[6], pAwl))
 
     for transcript_id in gene_dict:
         transcript_data = gene_dict[transcript_id]
@@ -377,11 +381,12 @@ def parse_genome(input_file, left_bounds, right_bounds):
         start = sorted(transcript_data, key=lambda x: int(x[1]))[0][1]
         end = sorted(transcript_data, key=lambda x: int(x[2]), reverse=True)[0][2]
         direction=transcript_data[0][3]
-
-        if direction=='+':
-            polyAWhiteList.append((chrom,direction,end,transcript_id))
-        elif direction=='-':
-            polyAWhiteList.append((chrom,direction,start,transcript_id))
+        pAwl=transcript_data[0][4]
+        if pAwl:
+            if direction=='+':
+                polyAWhiteList.append((chrom,direction,end,transcript_id))
+            elif direction=='-':
+                polyAWhiteList.append((chrom,direction,start,transcript_id))
 
         for entry in transcript_data:
             if entry[1] != start:
@@ -546,14 +551,15 @@ def main():
     left_bounds, right_bounds = {}, {}
     if genome_file!='None':
         print('\tparsing annotated splice sites')
-        chrom_list, left_bounds, right_bounds, polyAWhiteList = parse_genome(genome_file, left_bounds, right_bounds)
+        chrom_list, left_bounds, right_bounds, polyAWhiteList = parse_genome(genome_file, left_bounds, right_bounds, white_list_polyA)
     else:
         print('\tNo genome annotation provided, so splice sites will be entirely read derived and no polyA sites will be white-listed')
         chrom_list=set()
         polyAWhiteList=[]
 
     outPolyA=open(out_path+'/polyAWhiteList.bed','w')
-    if white_list_polyA=='1':
+
+    if '0' not in white_list_polyA:
         print('\t'+str(len(polyAWhiteList)), 'poly(A) sites whitelisted')
         for chrom,direction,end,transcript_id in polyAWhiteList:
             polyA=int(end)
