@@ -219,8 +219,6 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
             filtered_isoforms.append(isoform)
         else:
             show = False
-            if 'Isoform_293_35' in isoform:
-                show=True
             decision = True
             if show:
                 print('status', status)
@@ -363,6 +361,7 @@ def parse_clean_psl(psl_file, target_chromosome):
 
         name = a[9]
         if name in doneSet:
+            print(line)
             continue
         doneSet.add(name)
         abundance = int(a[9].split('_')[-1])
@@ -462,6 +461,25 @@ def psl_to_gtf(psl_file,gtf_file):
     gtf_handle.close()
 
 
+def filter_sam(sam_file,filtered_sam_file):
+    out_sam=open(filtered_sam_file,'w')
+    for line in open(sam_file):
+        if line[0]=='@':
+            out_sam.write(line)
+        else:
+            secondary=False
+            supplementary=False
+            a=line.strip().split('\t')
+            bitwise=format(int(a[1]), "b")[::-1]
+            padded_bitwise=bitwise+'00000000000000000'
+            secondary=padded_bitwise[8]
+            supplementary=padded_bitwise[11]
+            if secondary == '1' or supplementary == '1':
+                continue
+            out_sam.write(line)
+    out_sam.close()
+
+
 def main(infile):
     print('\treading genome sequence to determine A content of putative polyA sites')
     genome_sequence = read_fasta(genome)
@@ -469,10 +487,12 @@ def main(infile):
     processed_isoforms = path + 'Isoforms_full_length_consensus_reads.fasta'
     isoforms = read_fasta(processed_isoforms)
     sam_file = path + '/Isoforms.aligned.out.sam'
+    filtered_sam_file = path + '/Isoforms.aligned.out.filtered.sam'
     psl_file = path + '/Isoforms.aligned.out.psl'
     clean_psl_file = path + '/Isoforms.aligned.out.clean.psl'
     os.system('%s -G 400k -uf --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
-    os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
+    filter_sam(sam_file,filtered_sam_file)
+    os.system('%s -i %s > %s ' % (emtrey, filtered_sam_file, psl_file))
     os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
     print('\tcollecting chromosomes')
     chromosomes = collect_chromosomes(clean_psl_file)
@@ -495,6 +515,8 @@ def main(infile):
 #        print('writing', len(isoform_list), 'isoforms to file')
         write_isoforms(isoform_list, isoforms, psl_info)
 #    print('converting psl output to gtf output')
+    out2.close()
+    out3.close()
     psl_to_gtf(path + '/Isoforms.filtered.clean.psl',path + '/Isoforms.filtered.clean.gtf')
     print('\n')
 main(infile)

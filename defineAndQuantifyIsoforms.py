@@ -439,10 +439,10 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
     print('\n\tfinished generating isoforms models')
     out = open(individual_path + 'isoform_list', 'a')
 
-    print('start_left',len(count_dict['start_left']))
-    print('start_right',len(count_dict['start_right']))
-    print('end_left',len(count_dict['end_left']))
-    print('end_right',len(count_dict['end_right']))
+#    print('start_left',len(count_dict['start_left']))
+#    print('start_right',len(count_dict['start_right']))
+#    print('end_left',len(count_dict['end_left']))
+#    print('end_right',len(count_dict['end_right']))
 
 
     oute = open(individual_path + 'extended_isoforms', 'w')
