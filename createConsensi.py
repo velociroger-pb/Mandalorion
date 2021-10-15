@@ -162,8 +162,10 @@ def determine_consensus(name, fasta, fastq, counter):
 
         first = subsample_fasta_reads[0][1]
         sequences=[]
+        seq_lengths=[]
         mm_align = mm.Aligner(seq=first, preset='map-ont')
         for read,sequence in subsample_fasta_reads:
+            seq_lengths.append(len(sequence))
             for hit in mm_align.map(sequence):
                  if hit.is_primary:
                      if hit.strand==1:
@@ -171,17 +173,19 @@ def determine_consensus(name, fasta, fastq, counter):
                      elif hit.strand==-1:
                          sequences.append(mm.revcomp(sequence))
 
-
-        res = poa_aligner.msa(sequences, out_cons=True, out_msa=False)
-        if len(sequences)<=2:
-            consensus_sequence = sequences[0]
-        elif not res.cons_seq:
+        if np.median(seq_lengths)>14000:
+            print('long')
             consensus_sequence = sequences[0]
         else:
-            consensus_sequence = res.cons_seq[0]
+            res = poa_aligner.msa(sequences, out_cons=True, out_msa=False)
+            if len(sequences)<=2:
+                consensus_sequence = sequences[0]
+            elif not res.cons_seq:
+                consensus_sequence = sequences[0]
+            else:
+                consensus_sequence = res.cons_seq[0]
     else:
-        consensus_sequence=fasta_reads[0][1]
-
+        consensus_sequence = fasta_reads[0][1]
 
     out_cons_file = open(poa_cons, 'w')
     out_cons_file.write('>Consensus\n' + consensus_sequence + '\n')
