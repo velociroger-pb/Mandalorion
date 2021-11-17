@@ -14,12 +14,7 @@ def argParser():
     parser.add_argument('--input_fasta_file', '-i', type=str)
     parser.add_argument('--output_path', '-o', type=str)
     parser.add_argument('--adapter_file', '-a', type=str)
-    parser.add_argument(
-        '--config', '-c', type=str, action='store', default='',
-        help='If you want to use a config file to specify paths to\
-              programs, specify them here. Use for poa, racon, gonk,\
-              blat, and minimap2 if they are not in your path.',
-    )
+
     parser.add_argument(
         '-e', '--ends', type=str, default='ATGGG,AAAAA',
         help='Ends of your sequences. Defaults to Smartseq ends.\
@@ -34,37 +29,7 @@ input_file = args['input_fasta_file']
 adapter_file = args['adapter_file']
 ends = args['ends']
 
-
-def configReader(configIn):
-    '''Parses the config file.'''
-    progs = {}
-    for line in open(configIn):
-        if line.startswith('#') or not line.rstrip().split():
-            continue
-        line = line.rstrip().split('\t')
-        progs[line[0]] = line[1]
-    # should have minimap, racon, consensus, blat, and emtrey
-    possible = set(['minimap2', 'consensus', 'racon', 'blat', 'emtrey'])
-    inConfig = set()
-    for key in progs.keys():
-        inConfig.add(key)
-    # check for missing programs
-    # if missing, default to path
-    for missing in possible - inConfig:
-        if missing == 'consensus':
-            path = 'consensus.py'
-        else:
-            path = missing
-        progs[missing] = path
-        sys.stderr.write('Using ' + str(missing) + ' from your path, not the config file.\n')
-    return progs
-
-
-if args['config'] or args['c']:
-    progs = configReader(args['config'])
-    blat = progs['blat']
-else:
-    blat = 'blat'
+blat = 'blat'
 
 
 def read_fasta(inFile):

@@ -32,38 +32,10 @@ def argParser():
     parser.add_argument('--subsample', '-s', type=int, action='store')
     parser.add_argument('--numThreads', '-n', type=int, action='store')
     parser.add_argument('--consensusMode', '-C', type=str, default='P', action='store')
-    parser.add_argument(
-        '--config', '-c', type=str, action='store', default='',
-        help='If you want to use a config file to specify paths to\
-              programs, specify them here. Use for poa, racon, water,\
-              blat, and minimap2 if they are not in your path.')
+
     return vars(parser.parse_args())
 
 
-def configReader(configIn):
-    '''Parses the config file.'''
-    progs = {}
-    for line in open(configIn):
-        if line.startswith('#') or not line.rstrip().split():
-            continue
-        line = line.rstrip().split('\t')
-        progs[line[0]] = line[1]
-    # should have minimap, racon, consensus, blat, and emtrey
-    possible = set(['racon', 'medaka'])
-    inConfig = set()
-    for key in progs.keys():
-        inConfig.add(key)
-    # check for missing programs
-    # if missing, default to path
-    for missing in possible - inConfig:
-        if missing == 'consensus':
-            path = 'consensus.py'
-        else:
-            path = missing
-        progs[missing] = path
-        sys.stderr.write('Using ' + str(missing)
-                         + ' from your path, not the config file.\n')
-    return progs
 
 
 args = argParser()
@@ -73,13 +45,7 @@ subsample = args['subsample']
 numThreads = args['numThreads']
 consensusMode = args['consensusMode']
 
-if args['config']:
-    progs = configReader(args['config'])
-    racon = progs['racon']
-    medaka = progs['medaka']
-else:
-    racon = 'racon'
-    medaka = 'medaka_consensus'
+medaka = 'medaka_consensus'
 
 def simplify(infile, outfile, namefile):
     isoforms = read_fasta(infile)

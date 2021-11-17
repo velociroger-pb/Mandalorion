@@ -12,11 +12,7 @@ from time import localtime, strftime
 VERSION = 'v3.6.1 - This is the Isoform'
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    '-c', '--config_file', type=str,
-    help='''Tab delimited file that specifies where minimap,
-            blat, emtrey, and racon executables are'''
-)
+
 parser.add_argument(
     '-p', '--path', type=str, help='Directory to put output files into'
 )
@@ -158,7 +154,6 @@ if len(sys.argv) == 1:
     sys.exit(0)
 args = parser.parse_args()
 
-config_file = args.config_file
 path = args.path + '/'  # path where you want your output files to go
 temp_path = path + '/tmp/'
 upstream_buffer = args.upstream_buffer
@@ -210,37 +205,9 @@ if not os.path.isdir(temp_path):
 
 
 
-def configReader(configIn):
-    '''Parses the config file.'''
-    progs = {}
-    for line in open(configIn):
-        if line.startswith('#') or not line.rstrip().split():
-            continue
-        line = line.rstrip().split('\t')
-        progs[line[0]] = line[1]
-    # should have minimap, racon, consensus, blat, and emtrey
-    possible = set(['minimap2', 'racon', 'blat', 'emtrey'])
-    inConfig = set()
-    for key in progs.keys():
-        inConfig.add(key)
-    # check for missing programs
-    # if missing, default to path
-    for missing in possible - inConfig:
-        if missing == 'consensus':
-            path = 'consensus.py'
-        else:
-            path = missing
-        progs[missing] = path
-        sys.stderr.write(
-            'Using ' + str(missing) + ' from your path, not the config file.\n'
-        )
-    return progs
 
-
-progs = configReader(config_file)
-minimap2 = progs['minimap2']
-racon = progs['racon']
-emtrey = progs['emtrey']
+minimap2 = 'minimap2'
+emtrey = 'emtrey'
 
 print('\n-----------------------------------------------------\
        \nRunning Mandalorion - Isoform identification pipeline\
@@ -328,8 +295,8 @@ if 'C' in Modules:
            \nRunning Module C - creating consensus sequences\
            \n-----------------------------------------------\n')
     os.system(
-        'python3 %s/createConsensi.py -p %s -s %s -c %s -n %s -C %s'
-        % (MandoPath,temp_path, subsample_consensus, config_file, minimap2_threads, consensusMode)
+        'python3 %s/createConsensi.py -p %s -s %s -n %s -C %s'
+        % (MandoPath,temp_path, subsample_consensus, minimap2_threads, consensusMode)
     )
 
 if 'T' in Modules:
@@ -338,8 +305,8 @@ if 'T' in Modules:
            \n-----------------------------------------------\n')
     if adapter and ends:
         print('\tTrimming reads based on adapters and end sequences\n')
-        os.system('python3 %s/%s -i %s -a %s -o %s -c %s -e %s'
-        % (MandoPath,'postprocessingIsoforms.py', temp_path+'/isoform_tmp.fasta', adapter, temp_path, config_file,ends))
+        os.system('python3 %s/%s -i %s -a %s -o %s -e %s'
+        % (MandoPath,'postprocessingIsoforms.py', temp_path+'/isoform_tmp.fasta', adapter, temp_path, ends))
     else:
         print('\tNot Trimming: adapter (-a) and/or ends (-e) not provided.\
                \n\tReads are presumed to have been full-length, trimmed, and in the + direction.')
@@ -351,7 +318,7 @@ if 'F' in Modules:
            \n-------------------------------------\n')
     os.system(
         'python3 %s/filterIsoforms.py \
-            -p %s -i %s -r %s -R %s -n %s -G %s -c %s \
+            -p %s -i %s -r %s -R %s -n %s -G %s \
             -O %s -t %s -A %s -s %s -d %s -I %s -m %s 2> %s'
         % (
             MandoPath,
@@ -361,7 +328,6 @@ if 'F' in Modules:
             minimum_reads,
             minimum_internal_ratio,
             genome_sequence,
-            config_file,
             overhangs,
             minimap2_threads,
             Acutoff,

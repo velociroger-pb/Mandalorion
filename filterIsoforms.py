@@ -21,12 +21,6 @@ def argParser():
               Defaults to your current directory.',
     )
     parser.add_argument('--infile', '-i', type=str, action='store')
-    parser.add_argument(
-        '--config', '-c', type=str, action='store', default='',
-        help='If you want to use a config file to specify paths to\
-              programs, specify them here. Use for poa, racon, gonk,\
-              blat, and minimap2 if they are not in your path.',
-    )
     parser.add_argument('-n','--internal_ratio', type=float, action='store')
     parser.add_argument('-r', '--minimum_ratio', type=float)
     parser.add_argument('-R', '--minimum_reads', type=float)
@@ -42,31 +36,6 @@ def argParser():
     return vars(parser.parse_args())
 
 
-def configReader(configIn):
-    '''Parses the config file.'''
-    progs = {}
-    for line in open(configIn):
-        if line.startswith('#') or not line.rstrip().split():
-            continue
-        line = line.rstrip().split('\t')
-        progs[line[0]] = line[1]
-    # should have minimap, racon, consensus, blat, and emtrey
-    possible = set(['minimap2', 'consensus', 'racon', 'blat', 'emtrey'])
-    inConfig = set()
-    for key in progs.keys():
-        inConfig.add(key)
-    # check for missing programs
-    # if missing, default to path
-    for missing in possible - inConfig:
-        if missing == 'consensus':
-            path = 'consensus.py'
-        else:
-            path = missing
-        progs[missing] = path
-        sys.stderr.write('Using ' + str(missing) + ' from your path, not the config file.\n')
-    return progs
-
-
 args = argParser()
 path = args['path']
 infile = args['infile']
@@ -76,7 +45,6 @@ minimum_isoform_length = int(args['minimum_isoform_length'])
 internal_ratio = args['internal_ratio']
 
 genome = args['genome_sequence']
-configIn = args['config']
 Acutoff = float(args['Acutoff'])
 overhangs = np.array(args['overhangs'].split(','), dtype=int)
 minimap2_threads = args['minimap2_threads']
@@ -84,18 +52,7 @@ sw = int(args['splice_window'])
 downstream_buffer = int(args['downstream_buffer'])
 MandoPath=args['mandopath']
 
-if args['config']:
-    progs = configReader(args['config'])
-    minimap2 = progs['minimap2']
-    racon = progs['racon']
-    consensus = progs['consensus']
-    emtrey = progs['emtrey']
-    blat = progs['blat']
-else:
-    minimap2, racon, emtrey, blat = 'minimap2', 'racon', 'emtrey', 'blat'
-    consensus = 'consensus.py'
-
-consensus = 'python3 ' + consensus
+minimap2, emtrey = 'minimap2', 'emtrey'
 
 out2 = open(path + '/Isoforms.filtered.fasta', 'w')
 out3 = open(path + '/Isoforms.filtered.clean.psl', 'w')
