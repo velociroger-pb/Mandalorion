@@ -33,15 +33,12 @@ python3 Mando.py [OPTIONS]
 
 Running with default settings:
 ```bash
-python3 Mando.py -c config_file -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fasta -b Subreads.fastq
+python3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
 ```
 
 ### Options: ###
 
 ```bash
-  -c CONFIG_FILE, --config_file CONFIG_FILE
-                        Tab delimited file that specifies where minimap, blat,
-                        and emtrey executables are
                         
   -p PATH, --path PATH  Directory to put output files into
   
