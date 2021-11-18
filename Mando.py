@@ -125,6 +125,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    '-m', '--multi_exon_only', type=str, default='0',action="store_const", const='1',
+    help='''If used, Mandalorion will filter all single exon isoforms!'''
+)
+
+
+parser.add_argument(
     '-M', '--Modules', default='APSDCTFQ',
     help='''Defines what modules of Mandalorion will be run. By default this includes:
             A - Alignment,
@@ -176,6 +182,7 @@ feature_count = args.minimum_feature_count
 Acutoff = args.Acutoff
 sam_file=args.sam_file
 white_list_polyA=args.white_list_polyA
+multi_exon_only=args.multi_exon_only
 Modules=args.Modules
 consensusMode=args.consensusMode
 MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
@@ -319,7 +326,7 @@ if 'F' in Modules:
     os.system(
         'python3 %s/filterIsoforms.py \
             -p %s -i %s -r %s -R %s -n %s -G %s \
-            -O %s -t %s -A %s -s %s -d %s -I %s -m %s 2> %s'
+            -O %s -t %s -A %s -s %s -d %s -I %s -m %s -M %s 2> %s'
         % (
             MandoPath,
             temp_path,
@@ -335,6 +342,7 @@ if 'F' in Modules:
             downstream_buffer,
             minimum_isoform_length,
             MandoPath,
+            multi_exon_only,
             temp_path + '/filter_reasons.txt',
         )
     )
