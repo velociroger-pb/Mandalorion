@@ -51,6 +51,7 @@ overhangs = np.array(args['overhangs'].split(','), dtype=int)
 minimap2_threads = args['minimap2_threads']
 sw = int(args['splice_window'])
 downstream_buffer = int(args['downstream_buffer'])
+multi_exon_only = int(args['multi_exon_only'])
 MandoPath=args['mandopath']
 
 minimap2, emtrey = 'minimap2', 'emtrey'
