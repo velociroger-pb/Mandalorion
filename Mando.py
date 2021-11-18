@@ -125,8 +125,8 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    '-m', '--multi_exon_only', type=str, default='0',action="store_const", const='1',
-    help='''If used, Mandalorion will filter all single exon isoforms!'''
+    '-m', '--multi_exon_only', default='0',action='store_const', const='1',
+    help='''If used, Mandalorion will filter all single exon isoforms'''
 )
 
 
