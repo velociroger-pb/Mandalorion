@@ -343,7 +343,7 @@ def parse_clean_psl(psl_file, target_chromosome):
                                 psl_dict[name][0].append(blockend)
                     else:
                         sys.stderr.write(
-                            name + ' filtered because it only had a single exon and the multi_exon_only flag was set '\n'
+                            name + ' filtered because it only had a single exon and the multi_exon_only flag was set \n'
                         )
 
 
