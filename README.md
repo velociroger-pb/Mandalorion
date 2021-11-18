@@ -2,7 +2,6 @@
 [![Github release](https://img.shields.io/github/tag/christopher-vollmers/Mandalorion-1.svg?label=Version)](https://github.com/christopher-vollmers/Mandalorion-1/tags)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
-## This repository is being heavily modified currently. Stuff should work most of the time but behavior might change somewhat unpredictably. Things should be more stable in September 2021. A stable version of Mandalorion (3.5) lives in Roger Volden's github ##
 
 v3.6.1: This is the Isoform.
 

@@ -31,6 +31,7 @@ def argParser():
     parser.add_argument('-s', '--splice_window', type=str)
     parser.add_argument('-d', '--downstream_buffer', type=str)
     parser.add_argument('-I', '--minimum_isoform_length', type=str)
+    parser.add_argument('-M', '--multi_exon_only', type=str)
     parser.add_argument('-m', '--mandopath', type=str)
 
     return vars(parser.parse_args())
@@ -308,6 +309,7 @@ def parse_clean_psl(psl_file, target_chromosome):
         readend = int(a[12])
         readlength = readend - readstart
         direction = a[8]
+        exon_number=len(a[18].split(',')[:-1])
 
         if direction == '+':
             overhang5 = int(a[11])
@@ -325,18 +327,26 @@ def parse_clean_psl(psl_file, target_chromosome):
         if readlength >= minimum_isoform_length:
             if abundance >= minimum_reads:
                 if overhangs[0] <= overhang5 <= overhangs[1] and overhangs[2] <= overhang3 <= overhangs[3]:
-                    if name not in first_alignment:
-                        isoform_list.append(name)
-                        psl_info[name] = a
-                        blocksizes = a[18].split(',')[:-1]
-                        blockstarts = a[20].split(',')[:-1]
-                        psl_dict[name] = [[], direction]
-                        for index in np.arange(0, len(blocksizes), 1):
-                            blockstart = int(blockstarts[index])
-                            blocksize = int(blocksizes[index])
-                            blockend = blockstart + blocksize
-                            psl_dict[name][0].append(blockstart)
-                            psl_dict[name][0].append(blockend)
+                    if multi_exon_only=='0' or exon_number>1:
+
+                        if name not in first_alignment:
+                            isoform_list.append(name)
+                            psl_info[name] = a
+                            blocksizes = a[18].split(',')[:-1]
+                            blockstarts = a[20].split(',')[:-1]
+                            psl_dict[name] = [[], direction]
+                            for index in np.arange(0, len(blocksizes), 1):
+                                blockstart = int(blockstarts[index])
+                                blocksize = int(blocksizes[index])
+                                blockend = blockstart + blocksize
+                                psl_dict[name][0].append(blockstart)
+                                psl_dict[name][0].append(blockend)
+                    else:
+                        sys.stderr.write(
+                            name + ' filtered because it only had a single exon and the multi_exon_only flag was set '\n'
+                        )
+
+
                 else:
                     sys.stderr.write(
                         name + ' filtered because at ' + str(overhang5) + ' and ' + str(overhang3)
