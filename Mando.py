@@ -9,7 +9,7 @@ import mappy as mp
 from time import localtime, strftime
 
 
-VERSION = 'v3.6.1 - This is the Isoform'
+VERSION = 'v3.6.2 - This is the Isoform'
 
 parser = argparse.ArgumentParser()
 
@@ -69,7 +69,8 @@ parser.add_argument(
     help='''Fastq file(s) with R2C2 subreads,
             can be entered as a single file path,
             a comma separated list of  file paths,
-            or a path to a file of filenames file (has to end on .fofn) that contains one file path per line'''
+            or a path to a file of filenames file (has to end on .fofn) that contains one file path per line. 
+            Only needed if you specify consensus mode PC'''
 )
 parser.add_argument(
     '-O', '--overhangs', type=str, default='0,40,0,40',
@@ -146,7 +147,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '-C', '--consensusMode', type=str, default='P',
-    help='''Set to P or PC (deault = P). If P, only pyabpoa will be used to make isoform consensus sequences. If PM, medaka will be used as well. 
+    help='''Set to P or PC (deault = P). If P, only pyabpoa will be used to make isoform consensus sequences. If PC, medaka will be used as well. 
             PC generates slightly more accurate sequences but is much slower.'''
 )
 
