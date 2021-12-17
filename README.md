@@ -24,12 +24,18 @@ The script first removes a fixed number of bases from the ends of the read and t
 - [blat source](https://users.soe.ucsc.edu/~kent/src/blatSrc35.zip) or [blat executable](http://hgdownload.soe.ucsc.edu/admin/exe/)
 - [medaka](https://github.com/nanoporetech/medaka)
 
-The paths to these will need to be put into your config file [like this.](example_config) If you have the program installed or in your path already, replace the path with the name of the program.
+The paths to these will need to be put into your path.
+
+The following python libraries are required as well:
 
 - [mappy](https://pypi.org/project/mappy/)
 - [pyabPOA](https://pypi.org/project/pyabpoa/)
 
-After installation with pip3 these should just work
+```bash
+pip3 install mappy
+pip3 install pyabpoa==1.0.5
+```
+should just work to install them. Make sure to get the right version (1.0.5) of pyabpoa
 
 ## Usage ##
 ```bash
@@ -168,7 +174,7 @@ python3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
 
   -C CONSENSUSMODE, --consensusMode CONSENSUSMODE
                         Set to P or PC (deault = P). If P, only pyabpoa will
-                        be used to make isoform consensus sequences. If PM,
+                        be used to make isoform consensus sequences. If PC,
                         medaka will be used as well. PC generates slightly
                         more accurate sequences for R2C2 data but is much slower.
                         Use P is analyzing PacBio data.
