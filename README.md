@@ -24,7 +24,9 @@ The script first removes a fixed number of bases from the ends of the read and t
 - [blat source](https://users.soe.ucsc.edu/~kent/src/blatSrc35.zip) or [blat executable](http://hgdownload.soe.ucsc.edu/admin/exe/)
 - [medaka](https://github.com/nanoporetech/medaka)
 
-The paths to these will need to be put into your path.
+These will need to be put into your path.
+
+Note: We plan to discontinue medaka use in the next version. Medaka is very slow, requires us to update the polishing models, and has only a marginal benefit on isoform accuracy. When we do this, we will discontinue the "PC" consensus mode
 
 The following python libraries are required as well:
 
@@ -46,6 +48,7 @@ Running with default settings:
 ```bash
 python3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
 ```
+Everything else is optional:
 
 ### Options: ###
 
@@ -187,4 +190,5 @@ python3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
 I consider the *Isoforms.filtered.fasta* file the main output of the Mandalorion pipeline. It contains the polished sequences of all isoforms Mandalorion considers very high confidence. Mandalorion also creates *Isoforms.filtered.clean.psl* and *Isoforms.filtered.clean.gtf* files which contain minimap2 alignments of those sequences that had small indels removed. These files are easy to upload to the UCSC Genome Browser to inspect. This version of Mandalorion now also generates a *Isoforms.filtered.clean.quant* file which contains the number of R2C2/PacBio reads that associate which each isoform for each given fasta files.
 
 ## Utils ##
-These are the scripts used to do haplotype phasing and HLA analysis.
+
+These are the scripts used to do haplotype phasing and HLA analysis as well as preparing reads for Mandalorion and parsing output to fit the LRGASP consortium requirements. 
