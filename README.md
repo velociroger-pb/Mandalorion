@@ -3,13 +3,19 @@
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
 
-v3.6.1: This is the Isoform.
+v3.6.2: This is the Isoform.
 
 Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments. 
 
 ## PacBio read conversion/formatting ##
 
-PacBio ccs reads (.fastq) and subreads (.bam) files have to be converted (to .fasta and .fastq, respectively) and formatted to match C3POa naming convention. The bam to fastq conversion can be done with bedtools for example. I do recommend gzipping the resulting fastq files using a multithreaded tool like pigz. Then, you can use the *convertPBcDNAreadsForMandalorion.py* script in utils/ to get ccs reads and subreads into the right naming scheme as well as to subsample subreads to a useable depths. 
+PacBio ccs reads (.fastq) have to be converted (to .fasta and .fastq, respectively) and formatted to match C3POa naming convention. 
+Use the *convertPBcDNAreadsForMandalorion.py* script in utils/ for this purpose.
+
+## PolyA tail removal
+
+Depending on how reads are prepared (trimmed or not, polyA removed or not), the removePolyA.py script in utils/ should be used to get reads ready. 
+The script first removes a fixed number of bases from the ends of the read and then removes the polyA tail on the 3' end of the read. 
 
 ## Dependencies ##
 
@@ -155,6 +161,10 @@ python3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
                         useful if you want to for example filter with
                         different parameters without rerunning the whole
                         pipeline
+
+  -m, --multi_exon_only
+                        If used, Mandalorion will filter all single exon
+                        isoforms
 
   -C CONSENSUSMODE, --consensusMode CONSENSUSMODE
                         Set to P or PC (deault = P). If P, only pyabpoa will
