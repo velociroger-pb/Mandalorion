@@ -11,7 +11,7 @@ from time import localtime, strftime
 
 VERSION = 'v3.6.2 - This is the Isoform'
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(usage='\n\nRunning with default parameters:\n\npython3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads_noAdapters_noPolyA_5->3.fofn\n')
 
 parser.add_argument(
     '-p', '--path', type=str, help='Directory to put output files into'
