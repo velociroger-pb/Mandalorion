@@ -9,13 +9,14 @@ Takes R2C2/C3POa or PacBio/ccs/lima data and defines high confidence isoform con
 
 ## PacBio read conversion/formatting ##
 
-PacBio ccs reads (.fastq) have to be converted (to .fasta and .fastq, respectively) and formatted to match C3POa naming convention. 
+PacBio ccs reads (.fastq) have to be converted to fasta files and formatted to match C3POa naming convention. 
 Use the *convertPBcDNAreadsForMandalorion.py* script in utils/ for this purpose.
 
 ## PolyA tail removal
 
-Depending on how reads are prepared (trimmed or not, polyA removed or not), the removePolyA.py script in utils/ should be used to get reads ready. 
-The script first removes a fixed number of bases from the ends of the read and then removes the polyA tail on the 3' end of the read. 
+It is best to run Mandalorion with reads that have no adapter sequences (trimmed), no polyA tails, and in 5'->3' orientation. By default, C3POa (v2.3.0) does trimm reads but doesn't do polyA removal and, depending on the adapters used, may not put reads in 5'->3' orientation..   
+Therefore removePolyA.py script in utils/ should be used to get both PacBio (depending on preprocessing) and R2C2 reads ready. 
+The script first removes a fixed number of bases (can't be zero) from the ends of the read and then removes the polyA tail on the 3' end of the read. Depending on the polyA position it will also reorient the read in 5'->3' direction. 
 
 ## Dependencies ##
 
