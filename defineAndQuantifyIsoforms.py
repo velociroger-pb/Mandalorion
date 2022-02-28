@@ -14,11 +14,10 @@ parser.add_argument('--infile', '-i', type=str, action='store')
 parser.add_argument('--path', '-p', type=str, action='store')
 parser.add_argument('--downstream_buffer', '-d', type=int, action='store')
 parser.add_argument('--upstream_buffer', '-u', type=int, action='store')
-parser.add_argument('--subreads', '-b', type=str, action='store')
 parser.add_argument('--fasta_files', '-f', type=str, action='store')
 parser.add_argument('--minimum_feature_count', '-n', type=int, action='store')
 parser.add_argument('--minimum_read_count', '-R', type=int, action='store')
-parser.add_argument('--consensusMode', '-C', type=str, default='P', action='store')
+
 
 
 if len(sys.argv) == 1:
@@ -29,11 +28,9 @@ infile = args.infile
 path = args.path + '/'  # path where you want your output files to go
 downstream_buffer = args.downstream_buffer
 upstream_buffer = args.upstream_buffer
-subreads = args.subreads
 fasta_files = args.fasta_files
 minimum_feature_count = args.minimum_feature_count
 minimum_read_count = args.minimum_read_count
-consensusMode = args.consensusMode
 extend=True
 outbed = open(path + 'start_end.bed', 'w')
 
@@ -46,14 +43,6 @@ if '.fofn' in fasta_files:
 else:
     fastaList=fasta_files.split(',')
 
-
-if '.fofn' in subreads:
-    subreadList=[]
-    for line in open(subreads):
-        sub=line.strip()
-        subreadList.append(sub)
-else:
-    subreadList=subreads.split(',')
 
 
 def find_peaks(starts, ends, identity, count_dict):
@@ -253,13 +242,12 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
     for fasta_file in fastaList:
         tempSeqs, headers, sequences = [], [], []
         for name,seq,qual in mp.fastx_read(fasta_file):
-            readDict[('-').join(name.split('_')[0].split('-')[:5])] = [name, seq]
+            readDict[name] = [name, seq]
 
     for line in open(infile):
         a = line.strip().split('\t')
         read_chromosome, read_direction = a[13], a[8]
-        name = a[9].split('_')[0]
-        name = ('-').join(name.split('-')[:5])
+        name = a[9]
         show = False
         read_direction = '+'  # ignores read direction
         start, end = int(a[15]), int(a[16])
@@ -290,8 +278,6 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
                 left_splice_site = splice_dict[read_chromosome][left_splice]
                 right_splice_site = splice_dict[read_chromosome][right_splice]
                 identity += str(left_splice_site) + '-' + str(right_splice_site) + '~'
-        if show:
-            print(failed)
         if not failed:
             if identity.split('_')[1] != '':
                 if identity not in start_end_dict:
@@ -312,7 +298,6 @@ def sort_reads_into_splice_junctions(splice_dict, fastaList, infile):
                                                       left_extra,
                                                       right_extra,
                                                       read_direction))
-
     return start_end_dict, start_end_dict_mono
 
 
@@ -344,7 +329,7 @@ def group_mono_exon_transcripts(start_end_dict, start_end_dict_mono):
 def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path):
     left_extras, right_extras = {}, {}
     file_set = {}
-    isoform_counter, isoform_dict, subread_pointer = 0, {}, {}
+    isoform_counter, isoform_dict = 0, {}
 
     start_end_dict = group_mono_exon_transcripts(start_end_dict, start_end_dict_mono)
 
@@ -416,55 +401,35 @@ def define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
                 os.makedirs(individual_path + '/parsed_reads/' + subfolder)
             filename = subfolder + '/Isoform' + str(isoform_dict[new_identity])
             out_reads_fasta = open(individual_path + '/parsed_reads/' + filename + '.fasta', 'a')
-            out_reads_subreads = open(individual_path + '/parsed_reads/' + filename + '_subreads.fastq', 'w')
             out_reads_fasta.write(read)
             out_reads_fasta.close()
-            out_reads_subreads.close()
 
             file_entry = individual_path + '/parsed_reads/' + filename\
-                         + '.fasta' + '\t' + individual_path\
-                         + '/parsed_reads/' + filename + '_subreads.fastq'\
+                         + '.fasta'\
                          + '\t' + new_identity + '\n'
 
             if file_entry not in file_set:
                 file_set[file_entry]=0
 
             file_set[file_entry]+=1
-            read = read.split()[0].split('_')[0][1:]
 
-            subread_pointer[read] = individual_path + '/parsed_reads/' + filename + '_subreads.fastq'
-            # for subread, sequence, qual in subread_list:
-            #     out_reads_subreads.write(subread + '\n' + sequence
-            #                              + '\n+\n' + qual + '\n')
+
     print('\n\tfinished generating isoforms models')
     out = open(individual_path + 'isoform_list', 'a')
-
-#    print('start_left',len(count_dict['start_left']))
-#    print('start_right',len(count_dict['start_right']))
-#    print('end_left',len(count_dict['end_left']))
-#    print('end_right',len(count_dict['end_right']))
-
-
     oute = open(individual_path + 'extended_isoforms', 'w')
     for spliceform in count_dict['start_right']:
         oute.write(spliceform+'\n')
     oute.close()
 
+
+
     for item,repeats in file_set.items():
         if repeats >= minimum_read_count:
             out.write(item)
     out.close()
-    return subread_pointer
 
 
-def read_subreads(seq_file, subread_pointer):
-    for name, seq, qual in mp.fastx_read(seq_file):
-        root_name = ('-').join(name.split('_')[0].split('-')[:5])
-        filepath = subread_pointer.get(root_name)
-        if filepath:
-            outfile = open(filepath, 'a')
-            outfile.write('@%s\n%s\n+\n%s\n' % (name, seq, qual))
-            outfile.close()
+
 
 
 def main():
@@ -485,13 +450,7 @@ def main():
     print('\tdefining spliceforms')
     start_end_dict, start_end_dict_mono = sort_reads_into_splice_junctions(splice_dict, fastaList, infile)
     print('\tdefining isoforms')
-    subread_pointer = define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
-
-    if 'C' in consensusMode:
-        print('\treading subreads from files:')
-        for subread_file in subreadList:
-            print('\t' + subread_file)
-            read_subreads(subread_file, subread_pointer)
+    define_start_end_sites(start_end_dict, start_end_dict_mono, individual_path)
 
 
 if __name__ == '__main__':
