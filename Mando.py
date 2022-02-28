@@ -9,7 +9,7 @@ import mappy as mp
 from time import localtime, strftime
 
 
-VERSION = 'v3.6.2 - This is the Isoform'
+VERSION = 'v3.6.3 - I find this isoform vague and unconvincing'
 
 parser = argparse.ArgumentParser(usage='\n\nRunning with default parameters:\n\npython3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads_noAdapters_noPolyA_5->3.fofn\n')
 
@@ -27,11 +27,6 @@ parser.add_argument(
             and TSS determination (default 50)'''
 )
 parser.add_argument(
-    '-s', '--subsample_consensus', type=str, default='500',
-    help='''Defines how many random subreads are used to polish
-            isoform consensus sequences (default 500)'''
-)
-parser.add_argument(
     '-g', '--genome_annotation', type=str, default='None',
     help='''Genome annotation file (gtf).
             Is used to identify individual annotated splice sites.
@@ -47,16 +42,10 @@ parser.add_argument(
 )
 parser.add_argument('-i', '--minimum_internal_ratio', type=str, default='1')
 parser.add_argument(
-    '-R', '--minimum_reads', type=str, default='5',
-    help='''Minimum number of reads to make an isoform (default 5)'''
+    '-R', '--minimum_reads', type=str, default='3',
+    help='''Minimum number of reads to make an isoform (default 3)'''
 )
-parser.add_argument(
-    '-a', '--adapter_file', type=str,default=False,
-    help='''Fasta file with 5prime and 3prime adapters.
-            Use if your input reads are not trimmed (default C3POa output) and you want to trimm your isoforms.
-            Don't use if your reads are trimmed, aka default ccs/lima output
-            Will be ignored unless you also use -e to set your sequence ends.'''
-)
+
 parser.add_argument(
     '-f', '--R2C2_Consensus_reads', type=str,
     help='''Fasta file with R2C2 consensus reads,
@@ -64,14 +53,7 @@ parser.add_argument(
             a comma separated list of  file paths,
             or a path to a file of filenames file (has to end on .fofn) that contains one file path per line'''
 )
-parser.add_argument(
-    '-b', '--R2C2_subreads', type=str,
-    help='''Fastq file(s) with R2C2 subreads,
-            can be entered as a single file path,
-            a comma separated list of  file paths,
-            or a path to a file of filenames file (has to end on .fofn) that contains one file path per line. 
-            Only needed if you specify consensus mode PC'''
-)
+
 parser.add_argument(
     '-O', '--overhangs', type=str, default='0,40,0,40',
     help='''Defines bounds for unaligned bases on ends. Format:
@@ -81,14 +63,7 @@ parser.add_argument(
     '-t', '--minimap2_threads', type=str, default='4',
     help='Number of threads to use when running minimap and consensus calling (default 4)'
 )
-parser.add_argument(
-    '-e', '--ends', type=str, default=False,
-    help='''Ends of your sequences.
-            Use if your input reads are not trimmed and you want to trimm your isoforms, aka default C3POa output.
-            Don't use if your reads are trimmed, aka default ccs/lima output
-            Will be ignored unless you also use -a to set adapter sequences.
-            Format: 5prime,3prime; Smart-seq2 Example: ATGGG,AAAAA '''
-)
+
 parser.add_argument(
     '-I', '--minimum_isoform_length', type=str, default='500',
     help='Minimum length in nt of isoforms that will be considered (default 500)'
@@ -111,11 +86,11 @@ parser.add_argument(
 parser.add_argument(
     '-W', '--white_list_polyA', type=str, default='0',
     help='''If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
-            Annotated transcript ends will be  taken from annotation file given with -g. 
+            Annotated transcript ends will be  taken from annotation file given with -g.
             Only transcripts having one of the provided comma separated values in the line of their exon features will be used.
             E.g. setting -W to [SIRV,"basic"] will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
-            Setting -W to [exon] should include all transcripts in the gtf file. 
-            This is feature only checks whether the provided values are in the line, not where they are. 
+            Setting -W to [exon] should include all transcripts in the gtf file.
+            This is feature only checks whether the provided values are in the line, not where they are.
             That means that setting -W to [chr1] will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous'''
 )
 
@@ -139,17 +114,12 @@ parser.add_argument(
             S - defining splice sites,
             D - defining isoforms,
             C - Creating consensus sequences for those isoforms,
-            T - Trimming consensus sequences,
             F - Filtering isoforms,
             Q - Quantifying isoforms.
             Each module needs the output of the modules run before it to function properly.
             Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline. (default APSDCTFQ)'''
 )
-parser.add_argument(
-    '-C', '--consensusMode', type=str, default='P',
-    help='''Set to P or PC (deault = P). If P, only pyabpoa will be used to make isoform consensus sequences. If PC, medaka will be used as well. 
-            PC generates slightly more accurate sequences but is much slower.'''
-)
+
 
 parser.add_argument(
     '-v', '--version', action='version', version=VERSION,
@@ -165,18 +135,14 @@ path = args.path + '/'  # path where you want your output files to go
 temp_path = path + '/tmp/'
 upstream_buffer = args.upstream_buffer
 downstream_buffer = args.downstream_buffer
-subsample_consensus = args.subsample_consensus
 genome_annotation = args.genome_annotation
 genome_sequence = args.genome_sequence
-adapter = args.adapter_file
 minimum_ratio = args.minimum_ratio
 minimum_internal_ratio = args.minimum_internal_ratio
 minimum_reads = args.minimum_reads
 fasta_files = args.R2C2_Consensus_reads
-subreads = args.R2C2_subreads
 overhangs = args.overhangs
 minimap2_threads = args.minimap2_threads
-ends = args.ends
 minimum_isoform_length = args.minimum_isoform_length
 window = args.splice_site_window
 feature_count = args.minimum_feature_count
@@ -185,7 +151,7 @@ sam_file=args.sam_file
 white_list_polyA=args.white_list_polyA
 multi_exon_only=args.multi_exon_only
 Modules=args.Modules
-consensusMode=args.consensusMode
+
 MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
 
 
@@ -284,18 +250,16 @@ if 'D' in Modules:
 # The two number variables determine the window around TSS and TES
 # in which read ends can fall and still be matched to the site.
     os.system(
-        'python3 %s/defineAndQuantifyIsoforms.py -i %s -p %s -d %s -u %s -b %s -f %s -n %s -R %s -C %s'
+        'python3 %s/defineAndQuantifyIsoforms.py -i %s -p %s -d %s -u %s -f %s -n %s -R %s'
         % (
             MandoPath,
             clean_psl_file,
             temp_path,
             downstream_buffer,
             upstream_buffer,
-            subreads,
             fasta_files,
             feature_count,
-            minimum_reads,
-            consensusMode
+            minimum_reads
         )
     )
 if 'C' in Modules:
@@ -303,22 +267,11 @@ if 'C' in Modules:
            \nRunning Module C - creating consensus sequences\
            \n-----------------------------------------------\n')
     os.system(
-        'python3 %s/createConsensi.py -p %s -s %s -n %s -C %s'
-        % (MandoPath,temp_path, subsample_consensus, minimap2_threads, consensusMode)
+        'python3 %s/createConsensi.py -p %s -n %s'
+        % (MandoPath,temp_path, minimap2_threads)
     )
 
-if 'T' in Modules:
-    print('\n-----------------------------------------------\
-           \nRunning Module T - trimming consensus sequences\
-           \n-----------------------------------------------\n')
-    if adapter and ends:
-        print('\tTrimming reads based on adapters and end sequences\n')
-        os.system('python3 %s/%s -i %s -a %s -o %s -e %s'
-        % (MandoPath,'postprocessingIsoforms.py', temp_path+'/isoform_tmp.fasta', adapter, temp_path, ends))
-    else:
-        print('\tNot Trimming: adapter (-a) and/or ends (-e) not provided.\
-               \n\tReads are presumed to have been full-length, trimmed, and in the + direction.')
-        os.system('scp %s %s' % (temp_path + '/isoform_tmp.fasta',temp_path + 'Isoforms_full_length_consensus_reads.fasta'))
+    os.system('scp %s %s' % (temp_path + '/isoform_tmp.fasta',temp_path + 'Isoforms_full_length_consensus_reads.fasta'))
 
 if 'F' in Modules:
     print('\n-------------------------------------\
