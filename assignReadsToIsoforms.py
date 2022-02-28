@@ -96,7 +96,7 @@ def read_isoform_list(isoform_list):
     for line in open(isoform_list):
         a=line.strip().split('\t')
         location=a[0]
-        long_name=a[2]
+        long_name=a[1]
         long2locationDict[long_name]=location
     return long2locationDict
 
