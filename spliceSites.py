@@ -65,7 +65,7 @@ def readSAM(inFile):
             if line.startswith('@'):
                 continue
             line = line.rstrip().split('\t')
-            name = line[0].split('_')[0]
+            name = line[0]
             readLength=len(line[9])
             chromosome=line[2]
             if line[1] == '4': # unaligned
@@ -83,7 +83,7 @@ def readSAM(inFile):
                         ambig = int(column[5:])
                     if column.startswith('cs:Z:'):
                         CS=column[5:]
-                CIGAR=CS+'_'+line[3]+'_'+line[5]+'_'+name
+                CIGAR=CS+','+line[3]+','+line[5]+','+name
                 denominator, M, indel = parseCIGAR(line[5])
                 CigarDict[name]=CIGAR
                 mismatch = NM - indel - ambig
@@ -121,7 +121,7 @@ def getCSaroundSS(string,start,end):
     Counts the number of matches/mismatches and indels.
     Returns the total number of all, matches/mismatches (M), and indels.
     '''
-    CS,genomePosition, cstr, name = string.split('_')
+    CS,genomePosition, cstr, name = string.split(',')
     genomePosition=int(genomePosition)-1
 
     status=''
@@ -303,7 +303,7 @@ def collect_reads(reads, sam_file, dir_dict, target_chrom,readAccuracy):
     for line in reads:
         a = line.strip().split('\t')
         chrom = a[13]
-        name = a[9].split('_')[0]
+        name = a[9]
         dirn = a[8]
         if name in dir_dict:
             dirn = dir_dict[name]
@@ -469,7 +469,7 @@ def get_alignment_dir(sam_file):
         if line[0] == '@':
             continue
         a = line.strip().split('\t')
-        read_name = a[0].split('_')[0]
+        read_name = a[0]
         read_dir = a[1]
         if read_dir in ['0', '16']:
             dirn = [x.split('ts:A:')[1] for x in a[10:] if 'ts:A:' in a]
