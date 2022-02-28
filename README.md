@@ -15,6 +15,12 @@ It is best to run Mandalorion with reads that have no adapter sequences (trimmed
 Therefore the removePolyA.py script in utils/ should be used to get both PacBio (depending on preprocessing) and R2C2 reads ready.
 The script first removes a fixed number of bases (can't be zero) from the ends of the read and then removes the polyA tail on the 3' end of the read. Depending on the polyA position it will also reorient the read in 5'->3' direction.
 
+## Workflow
+
+Mandalorion contains several modules that are run sequentially by default (APDCFQ) to define, align, and quantify high-quality isoforms.
+
+![Asset1](https://user-images.githubusercontent.com/28308271/156075738-51d545ca-0b4c-4ef5-b2ac-2b29f36bc552.png)
+
 ## Dependencies ##
 
 - [minimap2](https://github.com/lh3/minimap2)
