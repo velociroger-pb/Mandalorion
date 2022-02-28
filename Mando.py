@@ -47,8 +47,8 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    '-f', '--R2C2_Consensus_reads', type=str,
-    help='''Fasta file with R2C2 consensus reads,
+    '-f', '--Consensus_reads', type=str,
+    help='''Fasta/fastq file with R2C2/PacBio consensus reads,
             can be entered as a single file path,
             a comma separated list of  file paths,
             or a path to a file of filenames file (has to end on .fofn) that contains one file path per line'''
@@ -111,7 +111,7 @@ parser.add_argument(
     help='''Defines what modules of Mandalorion will be run. By default this includes:
             A - Alignment,
             P - .sam to .clean.psl conversion,
-            S - defining splice sites,
+            S - def splice sites,
             D - defining isoforms,
             C - Creating consensus sequences for those isoforms,
             F - Filtering isoforms,
@@ -140,7 +140,7 @@ genome_sequence = args.genome_sequence
 minimum_ratio = args.minimum_ratio
 minimum_internal_ratio = args.minimum_internal_ratio
 minimum_reads = args.minimum_reads
-fasta_files = args.R2C2_Consensus_reads
+fasta_files = args.Consensus_reads
 overhangs = args.overhangs
 minimap2_threads = args.minimap2_threads
 minimum_isoform_length = args.minimum_isoform_length
