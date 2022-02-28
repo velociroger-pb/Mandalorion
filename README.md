@@ -17,7 +17,7 @@ The script first removes a fixed number of bases (can't be zero) from the ends o
 
 ## Workflow
 
-Mandalorion contains several modules that are run sequentially by default (APDCFQ) to define, align, and quantify high-quality isoforms.
+Mandalorion contains several modules that are run sequentially by default (APSDCFQ) to define, align, and quantify high-quality isoforms.
 
 ![Asset1](https://user-images.githubusercontent.com/28308271/156075738-51d545ca-0b4c-4ef5-b2ac-2b29f36bc552.png)
 
