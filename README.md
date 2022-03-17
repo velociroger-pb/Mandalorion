@@ -120,11 +120,14 @@ Everything else is optional:
                         discarded (default 0.5)
 
   -W, --white_list_polyA
-                        If set, polyA sites that fall within +/-20nt of
-                        annotated transcript ends will not be filtered
-                        regardless of Acutoff set with -A. Annotated
-                        transcript ends will be taken from annotation file
-                        given with -g
+                        If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
+                        Annotated transcript ends will be  taken from annotation file given with -g.
+                        Only transcripts having one of the provided comma separated values in the line of their exon features will be used.
+                        E.g. setting ***-W SIRV,"basic"*** will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
+                        Setting ***-W exon*** should include all transcripts in the gtf file.
+                        This is feature only checks whether the provided values are in the line, not where they are.
+                        That means that setting ***-W chr1*** will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous
+
 
   -S SAM_FILE, --sam_file SAM_FILE
                         If given, Mandalorion will use this file instead of
