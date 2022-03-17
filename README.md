@@ -166,3 +166,7 @@ I consider the *Isoforms.filtered.fasta* file the main output of the Mandalorion
 ## Utils ##
 
 These are the scripts used to do haplotype phasing and HLA analysis as well as preparing reads for Mandalorion and parsing output to fit the LRGASP consortium requirements.
+
+## Notes ##
+
+- New splice sites: Currently only canonical splice sites will be called based on read support alone. Most non-canonical read-based splice sites are trash
