@@ -49,7 +49,8 @@ def main():
         if trim:
             seq=seq[fivePrime:threePrime]
         length=len(seq)
-        newName=rootName+'_'+str(avgQ)+'_'+str(rawLength)+'_'+str(coverage)+'_'+str(length)+'_'+str(length)
+#        newName=rootName+'_'+str(avgQ)+'_'+str(rawLength)+'_'+str(coverage)+'_'+str(length)+'_'+str(length)
+        newName=name
         use=False
         seqTrimF,AstateF, AstartF, trimPosF = removePolyA(seq)
         seqTrimR,AstateR, AstartR, trimPosR = removePolyA(mappy.revcomp(seq))
