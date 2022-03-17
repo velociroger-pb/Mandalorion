@@ -39,16 +39,42 @@ pip3 install pyabpoa==1.0.5
 ```
 should just work to install them. Make sure to get the right version (1.0.5) of pyabpoa
 
-## Usage ##
+
+## Download ##
+Just navigate to the folder you want Mandalorion to live and git clone the repository
+
 ```bash
+git clone https://github.com/christopher-vollmers/Mandalorion.git
+```
+
+## Usage ##
+You can call Mando.py from the Mandalorion folder or from anywhere else so either
+
+```bash
+cd /path/to/Mandalorion/
 python3 Mando.py [OPTIONS]
+```
+or
+
+```bash
+python3 /path/to/Mandalorion/Mando.py [OPTIONS]
 ```
 
 Running with default settings:
 ```bash
 python3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
 ```
-Everything else is optional:
+
+.fofn file structure is simply a text file with one line per input fasta/fastq file.
+You can mix and match fasta/fastq files and gzipped and unzipped files.
+
+```bash
+/path/to/file1.fasta
+/path/to/file2.fastq
+/path/to/file4.fastq.gz
+```
+
+Here is a full list of options that you can use to modify Mandalorion behavior:
 
 ### Options: ###
 
@@ -123,10 +149,10 @@ Everything else is optional:
                         If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
                         Annotated transcript ends will be  taken from annotation file given with -g.
                         Only transcripts having one of the provided comma separated values in the line of their exon features will be used.
-                        E.g. setting ***-W SIRV,"basic"*** will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
-                        Setting ***-W exon*** should include all transcripts in the gtf file.
+                        E.g. setting [-W SIRV,"basic"] will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
+                        Setting [-W exon] should include all transcripts in the gtf file.
                         This is feature only checks whether the provided values are in the line, not where they are.
-                        That means that setting ***-W chr1*** will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous
+                        That means that setting [-W chr1] will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous
 
 
   -S SAM_FILE, --sam_file SAM_FILE
