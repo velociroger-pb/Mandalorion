@@ -19,7 +19,7 @@ The script first removes a fixed number of bases (can't be zero) from the ends o
 
 Mandalorion contains several modules that are run sequentially by default (APSDCFQ) to define, align, and quantify high-quality isoforms.
 
-![Asset1](https://user-images.githubusercontent.com/28308271/156075738-51d545ca-0b4c-4ef5-b2ac-2b29f36bc552.png)
+![Mandalorion_schematic3 6 3](https://user-images.githubusercontent.com/28308271/159105520-db9a8117-575a-46e5-bba7-0ba11b49cda9.png)
 
 ## Dependencies ##
 
