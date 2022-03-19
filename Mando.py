@@ -6,6 +6,7 @@ import sys
 import os
 import argparse
 import mappy as mp
+import time
 from time import localtime, strftime
 
 
@@ -183,10 +184,10 @@ if not os.path.isdir(temp_path):
 minimap2 = 'minimap2'
 emtrey = 'emtrey'
 
-print('\n-----------------------------------------------------\
+print('\n-------------------------------------------------------------\
        \nRunning Mandalorion - Isoform identification pipeline\
        \nVersion -', VERSION,'\
-       \n-----------------------------------------------------\n')
+       \n-------------------------------------------------------------\n')
 
 
 if not sam_file:
@@ -227,8 +228,9 @@ if 'S' in Modules:
     print('\n----------------------------------------\
            \nRunning Module S - defining splice sites\
            \n----------------------------------------\n')
+    start=time.time()
     os.system(
-        'python3 %s/spliceSites.py -i %s -p %s -c %s -g %s -r %s -s %s -w %s -m %s -W %s'
+        'python3 %s/spliceSites.py -i %s -p %s -c %s -g %s -r %s -s %s -w %s -m %s -W %s'# -n %s'
         % (
             MandoPath,
             clean_psl_file,
@@ -239,9 +241,11 @@ if 'S' in Modules:
             sam_file,
             window,
             feature_count,
-            white_list_polyA
+            white_list_polyA#,
+#            minimap2_threads
         )
     )
+    print('duration',time.time()-start)
 if 'D' in Modules:
     print('\n------------------------------------\
            \nRunning Module D - defining isoforms\
