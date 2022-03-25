@@ -328,7 +328,7 @@ def parse_clean_psl(psl_file, target_chromosome):
         if readlength >= minimum_isoform_length:
             if abundance >= minimum_reads:
                 if overhangs[0] <= overhang5 <= overhangs[1] and overhangs[2] <= overhang3 <= overhangs[3]:
-                    if multi_exon_only=='0' or exon_number>1:
+                    if multi_exon_only==0 or exon_number>1:
 
                         if name not in first_alignment:
                             isoform_list.append(name)
