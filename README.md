@@ -31,7 +31,7 @@ Isoforms.filtered.clean.quant: Number of reads from each supplied fasta file ass
 
 Mandalorion contains several modules that are run sequentially by default (APDFQ) to define, align, and quantify high-quality isoforms.
 
-![Asset1](https://user-images.githubusercontent.com/28308271/156075738-51d545ca-0b4c-4ef5-b2ac-2b29f36bc552.png)
+![Asset1](https://user-images.githubusercontent.com/28308271/168212350-30cdd210-1dbb-4aa4-ae44-7f9ce8cfdb2c.png)
 
 
 ## Download ##
