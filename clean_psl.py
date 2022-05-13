@@ -3,19 +3,38 @@
 # Roger Volden
 
 import sys
+import argparse
+
+parser = argparse.ArgumentParser()
 
 
-def parse_contigs(psl_file, clean_psl_file):
+parser.add_argument('--infile', '-i', type=str, action='store')
+parser.add_argument('--outfile', '-o', type=str, action='store')
+parser.add_argument('--primary', '-p', action='store_true')
+
+
+
+args = parser.parse_args()
+psl_file = args.infile
+clean_psl_file = args.outfile
+primary=args.primary
+
+
+def parse_contigs(psl_file, clean_psl_file,primary):
     '''
     Adjusts some of the psl values
     '''
-
+    used=set()
     out = open(clean_psl_file, 'w')
     for line in open(psl_file):
         a = line.strip().split('\t')
         start = int(a[15])
         blocksizes = a[18].split(',')[:-1]
         blockstarts = a[20].split(',')[:-1]
+
+        name=a[9]
+        if primary and name in used:
+            continue
 
         blockstarts_clean = []
         readstarts_clean = []
@@ -75,14 +94,15 @@ def parse_contigs(psl_file, clean_psl_file):
         a[19] = (',').join(readstarts_clean)
         a[20] = (',').join(blockstarts_clean)
 
+
+
         new_line = ('\t').join(a)
         out.write(new_line + '\n')
+        used.add(name)
 
 
 def main():
-    psl_file = sys.argv[1]
-    clean_psl_file = sys.argv[2]
-    parse_contigs(psl_file, clean_psl_file)
+    parse_contigs(psl_file, clean_psl_file,primary)
 
 
 main()

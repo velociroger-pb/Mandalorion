@@ -9,8 +9,14 @@ import mappy as mp
 import time
 from time import localtime, strftime
 
+PATH = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/utils/'
+sys.path.append(os.path.abspath(PATH))
 
-VERSION = 'v3.6.3 - I find this isoform vague and unconvincing'
+#from spliceSites import readSAM,parseCIGAR,getCSaroundSS,scan_for_best_bin,determine_cov,myround,find_peaks,collect_reads,parse_genome,make_genome_bins,get_chromoso$
+import SpliceDefineConsensus
+
+
+VERSION = 'v4.0.0 - Now THIS is isoform racing'
 
 parser = argparse.ArgumentParser(usage='\n\nRunning with default parameters:\n\npython3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads_noAdapters_noPolyA_5->3.fofn\n')
 
@@ -66,8 +72,8 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    '-I', '--minimum_isoform_length', type=str, default='500',
-    help='Minimum length in nt of isoforms that will be considered (default 500)'
+    '-I', '--minimum_isoform_length', type=str, default='200',
+    help='Minimum length in nt of isoforms that will be considered (default 200)'
 )
 parser.add_argument(
     '-n', '--minimum_feature_count', type=str, default='2',
@@ -95,30 +101,27 @@ parser.add_argument(
             That means that setting -W to [chr1] will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous'''
 )
 
-parser.add_argument(
-    '-S', '--sam_file', type=str, default=False,
-    help='''If given, Mandalorion will use this file instead of performing its own minimap2 alignment.
-            Careful! If names don't line up between this and the fasta and fastq files everything breaks!'''
-)
 
 parser.add_argument(
     '-m', '--multi_exon_only', default='0',action='store_const', const='1',
     help='''If used, Mandalorion will filter all single exon isoforms'''
 )
 
+parser.add_argument(
+    '-j', '--junctions', default='gtag,gcag,atac,ctac,ctgc,gtat',action='store',type=str,
+    help='''base context required (in lower-case for either strand) to call unannotated splice junctions (default gtag,gcag,atac,ctac,ctgc,gtat)'''
+)
 
 parser.add_argument(
-    '-M', '--Modules', default='APSDCTFQ',
+    '-M', '--Modules', default='APDFQ',
     help='''Defines what modules of Mandalorion will be run. By default this includes:
             A - Alignment,
             P - .sam to .clean.psl conversion,
-            S - def splice sites,
             D - defining isoforms,
-            C - Creating consensus sequences for those isoforms,
             F - Filtering isoforms,
             Q - Quantifying isoforms.
             Each module needs the output of the modules run before it to function properly.
-            Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline. (default APSDCTFQ)'''
+            Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline. (default APDFQ)'''
 )
 
 
@@ -148,9 +151,9 @@ minimum_isoform_length = args.minimum_isoform_length
 window = args.splice_site_window
 feature_count = args.minimum_feature_count
 Acutoff = args.Acutoff
-sam_file=args.sam_file
 white_list_polyA=args.white_list_polyA
 multi_exon_only=args.multi_exon_only
+junctions=args.junctions
 Modules=args.Modules
 
 MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
@@ -178,108 +181,82 @@ command.close()
 if not os.path.isdir(temp_path):
     os.system('mkdir %s' % temp_path)
 
-
-
-
 minimap2 = 'minimap2'
 emtrey = 'emtrey'
 
-print('\n-------------------------------------------------------------\
-       \nRunning Mandalorion - Isoform identification pipeline\
+print('\n----------------------------------------------------------------\
+       \nMandalorion - Isoform identification and quantification pipeline\
        \nVersion -', VERSION,'\
-       \n-------------------------------------------------------------\n')
+       \n----------------------------------------------------------------\n')
 
 
-if not sam_file:
-    sam_file = temp_path + '/mm2Alignments.sam'
-    if 'A' in Modules:
-        print('\n----------------------------\
-               \nRunning Module A - Alignment\
-               \n----------------------------\n')
-        tempFasta=temp_path+'/Combined.fasta'
-        out=open(tempFasta,'w')
-        for fasta in fastaList:
-            for name,seq,qual in mp.fastx_read(fasta):
-                out.write('>%s\n%s\n' %(name,seq))
-
-        out.close()
-        os.system(
-            '%s -G 400k --secondary=no -ax splice:hq --cs=long -uf -t %s %s %s > %s '
-            % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
-        )
-
-else:
-    print('\n\n**********  sam file provided. Using those alignments instead of aligning the reads in fasta file(s)  **********\n\n')
+sam_file = temp_path + '/mm2Alignments.sam'
+if 'A' in Modules:
+    print('\n----------------------------\
+           \n    Module A - Alignment\
+           \n----------------------------\n')
+    tempFasta=temp_path+'/Combined.fasta'
+    out=open(tempFasta,'w')
+    for fasta in fastaList:
+        for name,seq,qual in mp.fastx_read(fasta):
+            out.write('>%s\n%s\n' %(name,seq))
+    out.close()
+    os.system(
+        '%s -G 400k --secondary=no -ax splice:hq --cs=long -uf -t %s %s %s > %s '
+        % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
+    )
 
 
 psl_file = temp_path + '/mm2Alignments.psl'
 clean_psl_file = temp_path + '/mm2Alignments.clean.psl'
+clean_sorted_psl_file = temp_path + '/mm2Alignments.clean.sorted.psl'
 if 'P' in Modules:
-    print('\n----------------------------------------\
-           \nRunning Module P - sam to Psl conversion\
-           \n----------------------------------------\n')
+    print('\n------------------------------------------------------\
+           \n    Module P - .sam to .clean.sorted.psl conversion\
+           \n------------------------------------------------------\n')
 
-    print('\tConverting sam output to psl format\n')
-    os.system('%s -i %s > %s ' % (emtrey, sam_file, psl_file))
-    print('\tCleaning psl file of small Indels\n')
-    os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
 
-if 'S' in Modules:
+
+    print('\tconverting sam output to psl format')
+    os.system('%s -i %s > %s 2> %s' % (emtrey, sam_file, psl_file, temp_path+'/emtrey_messages.txt'))
+    print('\tcleaning psl file of small Indels')
+    os.system('python3 %s/%s -i %s -o %s -p' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
+    print('\tsorting clean psl file')
+    os.system('sort -k 14,14 -k 16,17n %s > %s' %(clean_psl_file,clean_sorted_psl_file))
+    print('\treading and splitting psl, sam, and fasta files into loci')
+    os.system('rm -r %s/%s' % (temp_path,'tmp_SS/'))
+    os.system('mkdir %s/%s' % (temp_path,'tmp_SS/'))
+    SpliceDefineConsensus.get_chromosomes(clean_sorted_psl_file, sam_file, set(),temp_path+'/tmp_SS',fastaList)
+
+
+
+if 'D' in Modules:
     print('\n----------------------------------------\
-           \nRunning Module S - defining splice sites\
+           \n      Module D - defining isoforms\
            \n----------------------------------------\n')
-    start=time.time()
     os.system(
-        'python3 %s/spliceSites.py -i %s -p %s -c %s -g %s -r %s -s %s -w %s -m %s -W %s'# -n %s'
+        'python3 %s/defineIsoforms.py -i %s -p %s -c %s -g %s -s %s -w %s -m %s -W %s -n %s -j %s -u %s -d %s -f %s'
         % (
             MandoPath,
-            clean_psl_file,
+            clean_sorted_psl_file,
             temp_path,
             '0.1',
             genome_annotation,
-            'g',
             sam_file,
             window,
             feature_count,
-            white_list_polyA#,
-#            minimap2_threads
-        )
-    )
-    print('duration',time.time()-start)
-if 'D' in Modules:
-    print('\n------------------------------------\
-           \nRunning Module D - defining isoforms\
-           \n------------------------------------\n')
-# This script sort raw reads into isoform bins.
-# The two number variables determine the window around TSS and TES
-# in which read ends can fall and still be matched to the site.
-    os.system(
-        'python3 %s/defineAndQuantifyIsoforms.py -i %s -p %s -d %s -u %s -f %s -n %s -R %s'
-        % (
-            MandoPath,
-            clean_psl_file,
-            temp_path,
-            downstream_buffer,
+            white_list_polyA,
+            minimap2_threads,
+            junctions,
             upstream_buffer,
-            fasta_files,
-            feature_count,
-            minimum_reads
+            downstream_buffer,
+            fasta_files
         )
     )
-if 'C' in Modules:
-    print('\n-----------------------------------------------\
-           \nRunning Module C - creating consensus sequences\
-           \n-----------------------------------------------\n')
-    os.system(
-        'python3 %s/createConsensi.py -p %s -n %s'
-        % (MandoPath,temp_path, minimap2_threads)
-    )
-
-    os.system('scp %s %s' % (temp_path + '/isoform_tmp.fasta',temp_path + 'Isoforms_full_length_consensus_reads.fasta'))
 
 if 'F' in Modules:
     print('\n-------------------------------------\
-           \nRunning Module F - filtering isoforms\
+           \n    Module F - filtering isoforms\
            \n-------------------------------------\n')
     os.system(
         'python3 %s/filterIsoforms.py \
@@ -307,7 +284,7 @@ if 'F' in Modules:
     os.system('scp ' + temp_path + '/Isoforms.filtered.* ' + path)
 if 'Q' in Modules:
     print('\n---------------------------------------\
-           \nRunning Module Q - quantifying isoforms\
+           \n    Module Q - quantifying isoforms\
            \n---------------------------------------\n')
     os.system(
         'python3 %s/assignReadsToIsoforms.py -m %s -f %s'

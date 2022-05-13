@@ -3,23 +3,43 @@
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
 
-v3.6.3: I find this isoform vague and unconvincing.
+v4.0.0: Now THIS is isoform racing.
 
 Takes R2C2/C3POa and/or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments.
 You can mix and match R2C2/PacBio reads and fasta/fastq files (quality scores are ignored).
 Mandalorion is not tested for use with regular ONT reads. I recommend using FLAIR instead for those.
 
-## PolyA tail removal ##
+## Short Example 
 
-It is best to run Mandalorion with reads that have no adapter sequences (trimmed), no polyA tails, and in 5'->3' orientation. By default, C3POa (v2.3.0) does trimm reads but doesn't do polyA removal and, depending on the adapters used, may not put reads in 5'->3' orientation..   
-Therefore the removePolyA.py script in utils/ should be used to get both PacBio (depending on preprocessing) and R2C2 reads ready.
-The script first removes a fixed number of bases (can't be zero) from the ends of the read and then removes the polyA tail on the 3' end of the read. Depending on the polyA position it will also reorient the read in 5'->3' direction.
+```bash
+to trim polyA tails and or adapter sequences:
 
-## Workflow
+python3 Mandalorion/utils/remove_polyA.py -i input.5to3.fasta -o input.5to3.noPolyA.fasta -t 5,5
 
-Mandalorion contains several modules that are run sequentially by default (APSDCFQ) to define, align, and quantify high-quality isoforms.
+after trimming adapters and polyA sequences:
 
-![Mandalorion_schematic3 6 3](https://user-images.githubusercontent.com/28308271/159105520-db9a8117-575a-46e5-bba7-0ba11b49cda9.png)
+python3 Mandalorion/Mando.py -p ./ -g gencodeV29.gtf -G hg38.fasta -f input.5to3.noPolyA.fasta
+```
+
+will generate 
+
+Isoforms.filtered.fasta: The consensus sequence of each high-confidence isoform.
+Isoforms.filtered.clean.gtf: Alignments of the isoform consensus sequences with small indels removed
+Isoforms.filtered.clean.quant: Number of reads from each supplied fasta file associated with each isoform
+
+## Overview ##
+
+Mandalorion contains several modules that are run sequentially by default (APDFQ) to define, align, and quantify high-quality isoforms.
+
+![Asset1](https://user-images.githubusercontent.com/28308271/156075738-51d545ca-0b4c-4ef5-b2ac-2b29f36bc552.png)
+
+
+## Download ##
+Just navigate to the folder you want Mandalorion to live and git clone the repository
+
+```bash
+git clone https://github.com/christopher-vollmers/Mandalorion.git
+```
 
 ## Dependencies ##
 
@@ -35,19 +55,19 @@ The following python libraries are required as well:
 
 ```bash
 pip3 install mappy
-pip3 install pyabpoa==1.0.5
+pip3 install pyabpoa
 ```
-should just work to install them. Make sure to get the right version (1.0.5) of pyabpoa
+should just work to install them. This version was tested with v1.4.1 of pyabpoa.
 
 
-## Download ##
-Just navigate to the folder you want Mandalorion to live and git clone the repository
+## PolyA tail removal ##
 
-```bash
-git clone https://github.com/christopher-vollmers/Mandalorion.git
-```
+It is best to run Mandalorion with reads that have no adapter sequences (trimmed), no polyA tails, and in 5'->3' orientation. By default, C3POa (v2.3.0) does trimm reads but doesn't do polyA removal and, depending on the adapters used, may not put reads in 5'->3' orientation..   
+Therefore the removePolyA.py script in utils/ should be used to get both PacBio (depending on preprocessing) and R2C2 reads ready.
+The script first removes a fixed number of bases (can't be zero) from the ends of the read and then removes the polyA tail on the 3' end of the read. Depending on the polyA position it will also reorient the read in 5'->3' direction.
 
-## Usage ##
+
+## Detailed usage ##
 You can call Mando.py from the Mandalorion folder or from anywhere else so either
 
 ```bash
@@ -80,109 +100,91 @@ Here is a full list of options that you can use to modify Mandalorion behavior:
 
 ```bash
 
+  -h, --help            show this help message and exit
   -p PATH, --path PATH  Directory to put output files into
-
   -u UPSTREAM_BUFFER, --upstream_buffer UPSTREAM_BUFFER
                         Defines upstream leniency window for polyA and TSS
                         determination (default 10)
-
   -d DOWNSTREAM_BUFFER, --downstream_buffer DOWNSTREAM_BUFFER
                         Defines downstream leniency window for polyA and TSS
                         determination (default 50)
-
   -g GENOME_ANNOTATION, --genome_annotation GENOME_ANNOTATION
                         Genome annotation file (gtf). Is used to identify
                         individual annotated splice sites. If -W is set it is
                         also used to white-list annotated polyA sites
-
   -G GENOME_SEQUENCE, --genome_sequence GENOME_SEQUENCE
                         Genome file (fasta)
-
   -r MINIMUM_RATIO, --minimum_ratio MINIMUM_RATIO
                         Proportion of reads that align to a locus required for
                         an isoform (default 0.01)
-
   -i MINIMUM_INTERNAL_RATIO, --minimum_internal_ratio MINIMUM_INTERNAL_RATIO
-                        An isoforms that is completely internal to another isoform
-                        will be discarded unless they reach this ratio compared
-                        to isoform that contains it (default=1)
-
   -R MINIMUM_READS, --minimum_reads MINIMUM_READS
-                        Minimum number of reads to make an isoform (default 5)
-
-
+                        Minimum number of reads to make an isoform (default 3)
   -f CONSENSUS_READS, --Consensus_reads CONSENSUS_READS
-                        Fasta/fastq file with R2C2/PacBio consensus reads, can be entered
-                        as a single file path, a comma separated list of file
-                        paths, or a path to a file of filenames file (has to
-                        end on .fofn) that contains one file path per line.
-
+                        Fasta/fastq file with R2C2/PacBio consensus reads, can
+                        be entered as a single file path, a comma separated
+                        list of file paths, or a path to a file of filenames
+                        file (has to end on .fofn) that contains one file path
+                        per line
   -O OVERHANGS, --overhangs OVERHANGS
                         Defines bounds for unaligned bases on ends. Format:
                         min5prime,max5prime,min3prime,max3prime (default
                         0,40,0,40)
-
   -t MINIMAP2_THREADS, --minimap2_threads MINIMAP2_THREADS
                         Number of threads to use when running minimap and
                         consensus calling (default 4)
-
   -I MINIMUM_ISOFORM_LENGTH, --minimum_isoform_length MINIMUM_ISOFORM_LENGTH
                         Minimum length in nt of isoforms that will be
-                        considered (default 500)
-
+                        considered (default 200)
   -n MINIMUM_FEATURE_COUNT, --minimum_feature_count MINIMUM_FEATURE_COUNT
                         Features (starts,ends, new splice sites) will be
                         considered if they are present in this number of reads
                         (default 2)
-
   -w SPLICE_SITE_WINDOW, --splice_site_window SPLICE_SITE_WINDOW
                         reads spliced within this number of nucleotides on
                         each side of a splice site will be considered spliced
                         at this site (default 1)
-
   -A ACUTOFF, --Acutoff ACUTOFF
                         Isoforms with A content of more than this cutoff in a
-                        15nt window downstream of their polyA site will be
+                        30nt window surrounding their polyA site will be
                         discarded (default 0.5)
-
-  -W, --white_list_polyA
-                        If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
-                        Annotated transcript ends will be  taken from annotation file given with -g.
-                        Only transcripts having one of the provided comma separated values in the line of their exon features will be used.
-                        E.g. setting [-W SIRV,"basic"] will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
-                        Setting [-W exon] should include all transcripts in the gtf file.
-                        This is feature only checks whether the provided values are in the line, not where they are.
-                        That means that setting [-W chr1] will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous
-
-
-  -S SAM_FILE, --sam_file SAM_FILE
-                        If given, Mandalorion will use this file instead of
-                        performing its own minimap2 alignment or reads. Careful! If
-                        names don't line up between this and the fasta and
-                        fastq subread files everything breaks!
-
-  -M MODULES, --Modules MODULES
-                        Defines what modules of Mandalorion will be run. By
-                        default this includes:
-                        A - Alignment,
-                        P - .sam to .clean.psl conversion,
-                        S - defining splice sites,
-                        D - defining isoforms,
-                        C - Creating consensus sequences for those isoforms
-                        F - Filtering isoforms
-                        Q - Quantifying isoforms.
-
-                        Each module need the output of the modules run before it to
-                        function properly. Running individual modules can be
-                        useful if you want to for example filter with
-                        different parameters without rerunning the whole
-                        pipeline
-
+  -W WHITE_LIST_POLYA, --white_list_polyA WHITE_LIST_POLYA
+                        If set, polyA sites that fall within +/-20nt of
+                        annotated transcript ends will not be filtered
+                        regardless of Acutoff set with -A. Annotated
+                        transcript ends will be taken from annotation file
+                        given with -g. Only transcripts having one of the
+                        provided comma separated values in the line of their
+                        exon features will be used. E.g. setting -W to
+                        [SIRV,"basic"] will whitelist spike-in SIRV
+                        transcripts and transcripts considered "basic", i.e.
+                        high confidence full length, in the gencode
+                        annotation. Setting -W to [exon] should include all
+                        transcripts in the gtf file. This is feature only
+                        checks whether the provided values are in the line,
+                        not where they are. That means that setting -W to
+                        [chr1] will whitelist all transcripts on chromosome 1
+                        but also transcripts with "chr1" in their name, so
+                        it's a bit dangerous
   -m, --multi_exon_only
                         If used, Mandalorion will filter all single exon
                         isoforms
-
+  -j JUNCTIONS, --junctions JUNCTIONS
+                        base context required (in lower-case for either
+                        strand) to call unannotated splice junctions (default
+                        gtag,gcag,atac,ctac,ctgc,gtat)
+  -M MODULES, --Modules MODULES
+                        Defines what modules of Mandalorion will be run. By
+                        default this includes: A - Alignment, P - .sam to
+                        .clean.psl conversion, D - defining isoforms, F -
+                        Filtering isoforms, Q - Quantifying isoforms. Each
+                        module needs the output of the modules run before it
+                        to function properly. Running individual modules can
+                        be useful if you want to for example filter with
+                        different parameters without rerunning the whole
+                        pipeline. (default APDFQ)
   -v, --version         Prints Mandalorion version
+
 ```
 
 ## Outputs ##
@@ -195,4 +197,5 @@ These are the scripts used to do haplotype phasing and HLA analysis as well as p
 
 ## Notes ##
 
-- New splice sites: Currently only canonical splice sites will be called based on read support alone. Most non-canonical read-based splice sites are trash
+- This version is a major rework. Things might go wrong. Please let me know if they do. 
+- The -j flag now allows you to define splice site context for unannotated splice sites

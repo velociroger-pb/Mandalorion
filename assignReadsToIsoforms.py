@@ -13,40 +13,8 @@ args = parser.parse_args()
 mandalorion_folder=args.mandalorion_output_folder
 fasta_files=args.fasta_files
 filtered_isoforms=mandalorion_folder+'/Isoforms.filtered.clean.psl'
-isoform_long_names=mandalorion_folder+'/Isoform_long_names.txt'
-isoform_list=mandalorion_folder+'/isoform_list'
-read_location=mandalorion_folder+'/read_locations.txt'
-out=open(mandalorion_folder+'/reads2isoforms.txt','w')
+r2i=mandalorion_folder+'/reads2isoforms.txt'
 outq=open(mandalorion_folder+'/Isoforms.filtered.clean.quant','w')
-
-def read_gtf_file(gtf_file):
-    gene_dict={}
-    for line in open(gtf_file):
-        a=line.strip().split('\t')
-        if len(a)>6:
-
-            type1=a[2]
-            info=a[8]
-            if type1=='gene':
-                gene_id=info.split('gene_id "')[1].split('"')[0]
-                if 'SIRV' in gene_id:
-                    gene_symbol==gene_id
-                else:
-                    gene_symbol=info.split('gene_name "')[1].split('"')[0]
-                gene_dict[gene_symbol]=(gene_id,a[3],a[4])
-    return gene_dict
-
-
-def read_sqanti_classification(sqanti_file):
-    gene_dict={}
-    for line in open(sqanti_file):
-        a=line.strip().split('\t')
-        isoform=a[0]
-        gene=a[6]
-        chromosome=a[1]
-        gene_dict[isoform]=(gene,chromosome)
-    return gene_dict
-
 
 def read_fasta(inFile):
     '''Reads in FASTA files, returns a dict of header:sequence'''
@@ -56,33 +24,15 @@ def read_fasta(inFile):
 
     return readDict
 
-
-def read_isoform_long_names(isoform_long_names):
-    short2longDict={}
-    for line in open(isoform_long_names):
-        a=line.strip().split('\t')
-        long_name=('_').join(a[0].split('_')[:-1])
-        short_name=a[1]
-        short2longDict[short_name]=long_name
-    return short2longDict
-
-def read_filtered_isoforms(filtered_isoforms,short2longDict,long2locationDict,sampleList,readMapDict):#,geneDict,geneSymbols):
+def read_filtered_isoforms(filtered_isoforms,r2i_dict,sampleList,readMapDict):
     for line in open(filtered_isoforms):
         a=line.strip().split('\t')
-        short_name=('_').join(a[9].split('_')[:-1])
-        long_name=short2longDict[short_name]
-        location=long2locationDict[long_name]
+        isoform=a[9]
         quantDict={}
-#        gene,chromosome=geneDict[a[9]]
-#        if gene in geneSymbols:
-#            gene_symbol,start,end=geneSymbols[gene]
-#        else:
-#            gene_symbol,start,end='-','-','-'
-#
         for sample in sampleList:
             quantDict[sample]=0
-        for name,seq,qual in mp.fastx_read(location):
-            out.write(name+'\t'+a[9]+'\n')
+
+        for name in r2i_dict[isoform]:
             sample=readMapDict[name]
             quantDict[sample]+=1
 
@@ -90,16 +40,6 @@ def read_filtered_isoforms(filtered_isoforms,short2longDict,long2locationDict,sa
         for sample in sampleList:
             outq.write(str(quantDict[sample])+'\t')
         outq.write('\n')
-
-def read_isoform_list(isoform_list):
-    long2locationDict={}
-    for line in open(isoform_list):
-        a=line.strip().split('\t')
-        location=a[0]
-        long_name=a[1]
-        long2locationDict[long_name]=location
-    return long2locationDict
-
 
 def mapReadLocation(fastaList):
     sampleList=[]
@@ -117,6 +57,18 @@ def mapReadLocation(fastaList):
     return sampleList,readMapDict
 
 
+def read_r2i(r2i):
+    r2i_dict={}
+    for line in open(r2i):
+        a=line.strip().split('\t')
+        read=a[0]
+        isoform=a[1]
+        if isoform not in r2i_dict:
+            r2i_dict[isoform]=[]
+        r2i_dict[isoform].append(read)
+    return r2i_dict
+
+
 if '.fofn' in fasta_files:
     fastaList=[]
     for line in open(fasta_files):
@@ -125,8 +77,10 @@ if '.fofn' in fasta_files:
 else:
     fastaList=fasta_files.split(',')
 
-sampleList,readMapDict=mapReadLocation(fastaList)
 
-short2longDict=read_isoform_long_names(isoform_long_names)
-long2locationDict=read_isoform_list(isoform_list)
-read_filtered_isoforms(filtered_isoforms,short2longDict,long2locationDict,sampleList,readMapDict)#,geneDict,geneSymbols)
+
+
+
+sampleList,readMapDict=mapReadLocation(fastaList)
+r2i_dict=read_r2i(r2i)
+read_filtered_isoforms(filtered_isoforms,r2i_dict,sampleList,readMapDict)

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # Christopher Vollmers
 # Roger Volden
+# Kayla Schimke
 
 import sys
 import os
 import numpy as np
 import argparse
 import mappy as mp
+import multiprocessing as mtp
 
 def argParser():
     parser = argparse.ArgumentParser(
@@ -112,7 +114,7 @@ def filter_isoforms(count, isoform_names, chromosome, psl_info, overhangs, minim
     return filtered_isoforms
 
 
-def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList):
+def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, chr_sequence,polyAWhiteList):
     internal_buffer = 20
     filtered_isoforms = []
     covered = {}
@@ -143,11 +145,11 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, ge
         coordinates[-1] = max(coordinates[-1] - internal_buffer, coordinates[-2])
         direction = info[1]
         if direction == '+':
-            Acontent = genome_sequence[chromosome][end:end + 15].upper().count('A') / 15
+            Acontent = chr_sequence[end:end + 15].upper().count('A') / 15
             polyArange = np.arange(end + 3, end + 23, 1)
             polyApos=end
         elif direction == '-':
-            Acontent = genome_sequence[chromosome][start - 15:start].upper().count('T') / 15
+            Acontent = chr_sequence[start - 15:start].upper().count('T') / 15
             polyArange = np.arange(start - 23, start - 3, 1)
             polyApos=start
         extend = set()
@@ -447,28 +449,9 @@ def filter_sam(sam_file,filtered_sam_file):
             out_sam.write(line)
     out_sam.close()
 
-
-def main(infile):
-    print('\treading genome sequence to determine A content of putative polyA sites')
-    genome_sequence = read_fasta(genome)
-    print('\taligning isoform consensus sequences')
-    processed_isoforms = path + 'Isoforms_full_length_consensus_reads.fasta'
-    isoforms = read_fasta(processed_isoforms)
-    sam_file = path + '/Isoforms.aligned.out.sam'
-    filtered_sam_file = path + '/Isoforms.aligned.out.filtered.sam'
-    psl_file = path + '/Isoforms.aligned.out.psl'
-    clean_psl_file = path + '/Isoforms.aligned.out.clean.psl'
-    os.system('%s -G 400k -uf --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
-    filter_sam(sam_file,filtered_sam_file)
-    os.system('%s -i %s > %s ' % (emtrey, filtered_sam_file, psl_file))
-    os.system('python3 %s/%s %s %s ' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
-    print('\tcollecting chromosomes')
-    chromosomes = collect_chromosomes(clean_psl_file)
-    numberOfChromosomes=str(len(chromosomes))
-    currentChromosome=0
-    for chromosome in chromosomes:
-        currentChromosome+=1
-        print('\tnow processing chromosome',chromosome,'('+str(currentChromosome)+'/'+numberOfChromosomes+')', ' '*60, end='\r')
+def process_chr(chromosome,clean_psl_file,chr_sequence):
+        # currentChromosome+=1
+        print('\t\tprocessing chromosome',chromosome,' '*60, end='\r') #'('+str(currentChromosome)+'/'+numberOfChromosomes+')', ' '*60, end='\r')
         sys.stderr.write(chromosome + '\n')
 #        print('reading polyA white list')
         polyAWhiteList=readWhiteList(polyAWhiteListFile,chromosome)
@@ -479,12 +462,47 @@ def main(infile):
 #        print('filtering isoforms for relative read coverage starting with', len(isoform_list), 'isoforms')
         isoform_list = filter_isoforms(count, isoform_list, chromosome, psl_info, overhangs, minimum_isoform_length)
 #        print('finding fully contained isoforms in', len(isoform_list), 'remaining isoforms')
-        isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, genome_sequence,polyAWhiteList)
+        isoform_list = look_for_contained_isoforms(isoform_list, chromosome, psl_dict, psl_info, chr_sequence,polyAWhiteList)
 #        print('writing', len(isoform_list), 'isoforms to file')
-        write_isoforms(isoform_list, isoforms, psl_info)
+        return isoform_list,psl_info
+
+def main(infile):
+    print('\treading genome sequence to determine A content of putative polyA sites')
+    genome_sequence = read_fasta(genome)
+    print('\taligning isoform consensus sequences')
+    processed_isoforms = path + 'Isoform_Consensi.fasta'
+    isoforms = read_fasta(processed_isoforms)
+    sam_file = path + '/Isoforms.aligned.out.sam'
+    filtered_sam_file = path + '/Isoforms.aligned.out.filtered.sam'
+    psl_file = path + '/Isoforms.aligned.out.psl'
+    clean_psl_file = path + '/Isoforms.aligned.out.clean.psl'
+    os.system('%s -G 400k -uf --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
+    filter_sam(sam_file,filtered_sam_file)
+    os.system('%s -i %s > %s ' % (emtrey, filtered_sam_file, psl_file))
+    os.system('python3 %s/%s -i %s -o %s -p' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
+    print('\tcollecting chromosomes')
+    chromosomes = collect_chromosomes(clean_psl_file)
+    numberOfChromosomes=str(len(chromosomes))
+    currentChromosome=0
+
+    pool=mtp.Pool(processes=int(minimap2_threads))
+    results={}
+    for chromosome in chromosomes:
+        results[chromosome]=pool.apply_async(process_chr,[chromosome,clean_psl_file,genome_sequence[chromosome]])
+        # isoform_list,psl_info=pool.apply_async(process_chr,[chromosome,clean_psl_file,genome_sequence]).get()
+
+
+
+    pool.close()
+    pool.join()
+    for chromosome in chromosomes:
+       isoform_list,psl_info=results[chromosome].get()
+       write_isoforms(isoform_list, isoforms, psl_info)
+
 #    print('converting psl output to gtf output')
     out2.close()
     out3.close()
     psl_to_gtf(path + '/Isoforms.filtered.clean.psl',path + '/Isoforms.filtered.clean.gtf')
     print('\n')
+
 main(infile)
