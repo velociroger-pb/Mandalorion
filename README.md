@@ -59,7 +59,7 @@ The following python libraries are required as well:
 pip3 install mappy
 pip3 install pyabpoa
 ```
-should just work to install them. This version was tested with v1.4.1 of pyabpoa.
+should just work to install them. This version was tested with v1.4.0 of pyabpoa.
 
 
 ## PolyA tail removal ##
