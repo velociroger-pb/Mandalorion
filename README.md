@@ -13,8 +13,18 @@ Mandalorion is not tested for use with regular ONT reads. I recommend using FLAI
 
 ```bash
 to trim polyA tails and or adapter sequences:
+Look at the reads in your hypothetical input.5to3.fasta file. 
+If your reads look like this (some untrimmed adapter sequences, polyA tail still present)
 
-python3 Mandalorion/utils/removePolyA.py -i input.5to3.fasta -o input.5to3.noPolyA.fasta -t 5,5
+CATGTGTATAAGAGACAGTAGTACTTGGTGGGG [RNA transcript 1]  AAAAAAAAAAAAAAAAAAAAAAGTGAACTGAGCGACTCTGCGT
+CATGTGTATAAGAGACAGTAGTACTTGGTGGGG [RNA transcript 2]  AAAAAAAAAAAAAAAAAAAAAAGTGAACTGAGCGACTCTGCGT
+CATGTGTATAAGAGACAGTAGTACTTGGTGGGG [RNA transcript 3]  AAAAAAAAAAAAAAAAAAAAAAGTGAACTGAGCGACTCTGCGT
+
+|-------------33nt--------------|                                           |--------21nt-------|
+
+remove untrimmed adapter sequences and polyA tails like this:
+
+python3 Mandalorion/utils/removePolyA.py -i input.5to3.fasta -o input.5to3.noPolyA.fasta -t 33,21
 
 after trimming adapters and polyA sequences:
 
