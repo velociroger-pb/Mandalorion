@@ -14,7 +14,7 @@ Mandalorion is not tested for use with regular ONT reads. I recommend using FLAI
 ```bash
 to trim polyA tails and or adapter sequences:
 
-python3 Mandalorion/utils/remove_polyA.py -i input.5to3.fasta -o input.5to3.noPolyA.fasta -t 5,5
+python3 Mandalorion/utils/removePolyA.py -i input.5to3.fasta -o input.5to3.noPolyA.fasta -t 5,5
 
 after trimming adapters and polyA sequences:
 
