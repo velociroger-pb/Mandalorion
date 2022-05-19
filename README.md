@@ -24,7 +24,9 @@ python3 Mandalorion/Mando.py -p ./ -g gencodeV29.gtf -G hg38.fasta -f input.5to3
 will generate 
 
 Isoforms.filtered.fasta: The consensus sequence of each high-confidence isoform.
+
 Isoforms.filtered.clean.gtf: Alignments of the isoform consensus sequences with small indels removed
+
 Isoforms.filtered.clean.quant: Number of reads from each supplied fasta file associated with each isoform
 
 ## Overview ##
