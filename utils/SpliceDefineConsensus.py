@@ -16,10 +16,11 @@ def get_parsed_files(out_tmp,chrom_list):
     roots=set()
     for file1 in os.listdir(out_tmp):
         if os.path.isfile(out_tmp+'/'+file1):
-            root=file1.split('.')[0]
-            chrom,start,end = root.split('~')
-            chrom_list.add(chrom)
-            roots.add(root)
+            if '.fasta' in file1:
+                root=file1.split('.fasta')[0]
+                chrom,start,end = root.split('~')
+                chrom_list.add(chrom)
+                roots.add(root)
     return chrom_list,roots
 
 def readSAM(inFile,target_chrom):
