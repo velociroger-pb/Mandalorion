@@ -470,7 +470,7 @@ def main(infile):
     print('\treading genome sequence to determine A content of putative polyA sites')
     genome_sequence = read_fasta(genome)
     print('\taligning isoform consensus sequences')
-    processed_isoforms = path + 'Isoform_Consensi.fasta'
+    processed_isoforms = infile
     isoforms = read_fasta(processed_isoforms)
     sam_file = path + '/Isoforms.aligned.out.sam'
     filtered_sam_file = path + '/Isoforms.aligned.out.filtered.sam'
