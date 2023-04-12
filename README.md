@@ -59,21 +59,24 @@ git clone https://github.com/christopher-vollmers/Mandalorion.git
 
 ## Dependencies ##
 
+If you have a C and go compiler installed, then run the following to install all dependencies for Mandalorion
+
+```bash
+cd Mandalorion
+sh setup.sh
+```
+
+The command installs local copies of
+
 - [minimap2](https://github.com/lh3/minimap2)
 - [emtrey](https://github.com/rvolden/emtrey) ([go](https://golang.org/dl/))
 
-These will need to be put into your path.
-
-The following python libraries are required as well:
+as well as use pip install to install the correct versions of
 
 - [mappy](https://pypi.org/project/mappy/)
 - [pyabPOA](https://pypi.org/project/pyabpoa/)
 
-```bash
-pip3 install mappy
-pip3 install pyabpoa
-```
-should just work to install them. This version was tested with v1.4.0 of pyabpoa.
+This version was tested with v1.4.0 of pyabpoa.
 
 
 ## PolyA tail removal ##
