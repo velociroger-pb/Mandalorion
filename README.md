@@ -59,7 +59,7 @@ git clone https://github.com/christopher-vollmers/Mandalorion.git
 
 ## Dependencies ##
 
-Make sure a C++ and GO ([go](https://golang.org/dl/) compiler installed, then run the following to install all dependencies for Mandalorion
+Make sure a C++ and GO ([go](https://golang.org/dl/)) compiler installed, then run the following to install all dependencies for Mandalorion
 
 ```bash
 cd Mandalorion
