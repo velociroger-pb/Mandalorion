@@ -108,8 +108,13 @@ def main():
 
     left_bounds, right_bounds = {}, {}
     if genome_file!='None':
-        print('\tparsing annotated splice sites')
-        chrom_list, left_bounds, right_bounds, polyAWhiteList = SpliceDefineConsensus.parse_genome(genome_file, left_bounds, right_bounds, white_list_polyA)
+        if genome_file.endswith('.gtf.gz') or genome_file.endswith('.gtf'):
+            print('\tparsing annotated splice sites')
+            chrom_list, left_bounds, right_bounds, polyAWhiteList = SpliceDefineConsensus.parse_genome(genome_file, left_bounds, right_bounds, white_list_polyA)
+        else:
+            print('\tgenome annotation file does not end with .gtf or .gtf.gz. File will be ignored. Splice sites will be entirely read derived and no polyA sites will be white-listed')
+            chrom_list=set()
+            polyAWhiteList=[]
     else:
         print('\tNo genome annotation provided, so splice sites will be entirely read derived and no polyA sites will be white-listed')
         chrom_list=set()

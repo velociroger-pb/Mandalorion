@@ -3,7 +3,7 @@
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
 
-v4.0.0: Now THIS is isoform racing.
+v4.1.0: Could I, perhaps, hold the isoform? Please?
 
 Takes R2C2/C3POa and/or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments.
 You can mix and match R2C2/PacBio reads and fasta/fastq files (quality scores are ignored).
@@ -38,6 +38,10 @@ Isoforms.filtered.fasta: The consensus sequence of each high-confidence isoform.
 Isoforms.filtered.clean.gtf: Alignments of the isoform consensus sequences with small indels removed
 
 Isoforms.filtered.clean.quant: Number of reads from each supplied fasta file associated with each isoform
+
+Isoforms.filtered.clean.tpm: Normalized expression values for each supplied fasta file associated with each isoform
+
+Isoforms.filtered.clean.genes: Isoform groups and gene association
 
 ## Overview ##
 

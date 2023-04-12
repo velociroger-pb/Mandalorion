@@ -12,6 +12,7 @@ parser.add_argument('--infile', '-i', type=str, action='store')
 parser.add_argument('--outfile', '-o', type=str, action='store')
 parser.add_argument('--primary', '-p', action='store_true')
 
+minimum_intron_size=10
 
 
 args = parser.parse_args()
@@ -60,7 +61,7 @@ def parse_contigs(psl_file, clean_psl_file,primary):
             if index % 2 == 0:
                 block += size_gap[index]
             if index % 2 == 1:
-                if size_gap[index] < 20:
+                if size_gap[index] < minimum_intron_size:
                     block += size_gap[index]
                 else:
                     new_size_gap.append(block)

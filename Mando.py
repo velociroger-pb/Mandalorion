@@ -12,11 +12,10 @@ from time import localtime, strftime
 PATH = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/utils/'
 sys.path.append(os.path.abspath(PATH))
 
-#from spliceSites import readSAM,parseCIGAR,getCSaroundSS,scan_for_best_bin,determine_cov,myround,find_peaks,collect_reads,parse_genome,make_genome_bins,get_chromoso$
 import SpliceDefineConsensus
 
 
-VERSION = 'v4.0.0 - Now THIS is isoform racing'
+VERSION = "v4.1.0 - Could I, perhaps, hold the isoform? Please?"
 
 parser = argparse.ArgumentParser(usage='\n\nRunning with default parameters:\n\npython3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads_noAdapters_noPolyA_5->3.fofn\n')
 
@@ -181,11 +180,11 @@ command.close()
 if not os.path.isdir(temp_path):
     os.system('mkdir %s' % temp_path)
 
-minimap2 = 'minimap2'
-emtrey = 'emtrey'
+minimap2 = MandoPath+'minimap2/minimap2'
+emtrey = MandoPath+'emtrey/emtrey'
 
 print('\n----------------------------------------------------------------\
-       \nMandalorion - Isoform identification and quantification pipeline\
+       \nMandalorion - Isoform identification and quantification\
        \nVersion -', VERSION,'\
        \n----------------------------------------------------------------\n')
 
@@ -196,16 +195,41 @@ if 'A' in Modules:
            \n    Module A - Alignment\
            \n----------------------------\n')
     tempFasta=temp_path+'/Combined.fasta'
-    out=open(tempFasta,'w')
-    for fasta in fastaList:
-        for name,seq,qual in mp.fastx_read(fasta):
-            out.write('>%s\n%s\n' %(name,seq))
-    out.close()
-    os.system(
-        '%s -G 400k --secondary=no -ax splice:hq --cs=long -uf -t %s %s %s > %s '
-        % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
-    )
 
+    print('\tchecking input fasta/q files')
+    reads=False
+    if len(fastaList)==1:
+        print('\t1 fasta/q file provided')
+        use_file=False
+        fasta=fastaList[0]
+        if os.path.exists(fasta) and os.path.getsize(fasta)>0:
+            use_file=True
+        if use_file:
+            tempFasta=fastaList[0]
+            reads=True
+        else:
+            print('\t',fasta, 'does not exist or is an empty file')
+    else:
+        print('\tcombining '+str(len(fastaList))+' input fasta/q files')
+        out=open(tempFasta,'w')
+        for fasta in fastaList:
+            use_file=False
+            if os.path.exists(fasta) and os.path.getsize(fasta)>0:
+                use_file=True
+            if use_file:
+                reads=True
+                for name,seq,qual in mp.fastx_read(fasta):
+                    out.write('>%s\n%s\n' %(name,seq))
+            else:
+                print('\t',fasta, 'does not exist or is an empty file')
+        out.close()
+    if reads:
+        os.system(
+            '%s -G 400k --secondary=no -ax splice:hq --cs=long -uf -t %s %s %s > %s '
+            % (minimap2, minimap2_threads, genome_sequence, tempFasta, sam_file)
+        )
+    else:
+        print('\t no reads were provided. Alignment will not be performed')
 
 psl_file = temp_path + '/mm2Alignments.psl'
 clean_psl_file = temp_path + '/mm2Alignments.clean.psl'
@@ -215,73 +239,118 @@ if 'P' in Modules:
            \n    Module P - .sam to .clean.sorted.psl conversion\
            \n------------------------------------------------------\n')
 
+    input=False
+    if os.path.exists(sam_file) and os.path.getsize(sam_file)>0:
+        input=True
 
-
-    print('\tconverting sam output to psl format')
-    os.system('%s -i %s > %s 2> %s' % (emtrey, sam_file, psl_file, temp_path+'/emtrey_messages.txt'))
-    print('\tcleaning psl file of small Indels')
-    os.system('python3 %s/%s -i %s -o %s -p' % (MandoPath,'clean_psl.py', psl_file, clean_psl_file))
-    print('\tsorting clean psl file')
-    os.system('sort -k 14,14 -k 16,17n %s > %s' %(clean_psl_file,clean_sorted_psl_file))
-    print('\treading and splitting psl, sam, and fasta files into loci')
-    os.system('rm -r %s/%s' % (temp_path,'tmp_SS/'))
-    os.system('mkdir %s/%s' % (temp_path,'tmp_SS/'))
-    SpliceDefineConsensus.get_chromosomes(clean_sorted_psl_file, sam_file, set(),temp_path+'/tmp_SS',fastaList)
-
+    if input:
+        print('\tconverting sam output to psl format')
+        os.system('%s -i %s > %s 2> %s' % (emtrey, sam_file, psl_file, temp_path+'/emtrey_messages.txt'))
+        print('\tcleaning psl file of small Indels')
+        SpliceDefineConsensus.clean_psl(psl_file, clean_psl_file,True)
+        print('\tsorting clean psl file')
+        os.system('sort -k 14,14 -k 16,17n %s > %s' %(clean_psl_file,clean_sorted_psl_file))
+        print('\treading and splitting psl, sam, and fasta files into loci')
+        os.system('rm -r %s/%s' % (temp_path,'tmp_SS/'))
+        os.system('mkdir %s/%s' % (temp_path,'tmp_SS/'))
+        SpliceDefineConsensus.get_chromosomes(clean_sorted_psl_file, sam_file, set(),temp_path+'/tmp_SS',fastaList)
+    else:
+        print('\tno or empty SAM file was provided. File conversions and parsing not performed')
 
 
 if 'D' in Modules:
     print('\n----------------------------------------\
            \n      Module D - defining isoforms\
            \n----------------------------------------\n')
-    os.system(
-        'python3 %s/defineIsoforms.py -i %s -p %s -c %s -g %s -s %s -w %s -m %s -W %s -n %s -j %s -u %s -d %s -f %s'
-        % (
-            MandoPath,
-            clean_sorted_psl_file,
-            temp_path,
-            '0.1',
-            genome_annotation,
-            sam_file,
-            window,
-            feature_count,
-            white_list_polyA,
-            minimap2_threads,
-            junctions,
-            upstream_buffer,
-            downstream_buffer,
-            fasta_files
+    everything_present=True
+
+    if not os.path.exists(clean_sorted_psl_file) or os.path.getsize(clean_sorted_psl_file)==0:
+        print('\tclean sorted psl file missing or empty')
+        everything_present=False
+    if not os.path.exists(sam_file) or os.path.getsize(sam_file)==0:
+        print('\tsam file missing or empty')
+        everything_present=False
+    for fasta_file in fastaList:
+        if not os.path.exists(fasta_file) or os.path.getsize(fasta_file)==0:
+            print('\t',fasta_file,'missing or empty')
+            everything_present=False
+
+    if everything_present:
+        os.system(
+            'python3 %s/defineIsoforms.py -i %s -p %s -c %s -g %s -s %s -w %s -m %s -W %s -n %s -j %s -u %s -d %s -f %s'
+            % (
+                MandoPath,
+                clean_sorted_psl_file,
+                temp_path,
+                '0.1',
+                genome_annotation,
+                sam_file,
+                window,
+                feature_count,
+                white_list_polyA,
+                minimap2_threads,
+                junctions,
+                upstream_buffer,
+                downstream_buffer,
+                fasta_files
+            )
         )
-    )
+    else:
+        print('\tone or more input files missing or empty. Isoforms not defined')
 
 if 'F' in Modules:
     print('\n-------------------------------------\
            \n    Module F - filtering isoforms\
            \n-------------------------------------\n')
-    os.system(
-        'python3 %s/filterIsoforms.py \
-            -p %s -i %s -r %s -R %s -n %s -G %s \
-            -O %s -t %s -A %s -s %s -d %s -I %s -m %s -M %s 2> %s'
-        % (
-            MandoPath,
-            temp_path,
-            temp_path + '/Isoform_Consensi.fasta',
-            minimum_ratio,
-            minimum_reads,
-            minimum_internal_ratio,
-            genome_sequence,
-            overhangs,
-            minimap2_threads,
-            Acutoff,
-            window,
-            downstream_buffer,
-            minimum_isoform_length,
-            MandoPath,
-            multi_exon_only,
-            temp_path + '/filter_reasons.txt',
+
+    everything_present=True
+    if not os.path.exists(temp_path + '/Isoform_Consensi.fasta') or os.path.getsize(temp_path + '/Isoform_Consensi.fasta')==0:
+        print('\tisoforms fasta missing or empty')
+        everything_present=False
+
+    if not os.path.exists(genome_sequence) or os.path.getsize(genome_sequence)==0:
+        print('\tgenome sequence fasta missing or empty')
+        everything_present=False
+
+    if everything_present:
+        os.system(
+            'python3 %s/filterIsoforms.py \
+                -p %s -i %s -r %s -R %s -n %s -G %s \
+                -O %s -t %s -A %s -s %s -d %s -I %s -m %s -M %s 2> %s'
+            % (
+                MandoPath,
+                temp_path,
+                temp_path + '/Isoform_Consensi.fasta',
+                minimum_ratio,
+                minimum_reads,
+                minimum_internal_ratio,
+                genome_sequence,
+                overhangs,
+                minimap2_threads,
+                Acutoff,
+                window,
+                downstream_buffer,
+                minimum_isoform_length,
+                MandoPath,
+                multi_exon_only,
+                temp_path + '/filter_reasons.txt',
+            )
         )
-    )
-    os.system('scp ' + temp_path + '/Isoforms.filtered.* ' + path)
+
+        os.system('sort -k 14,14 -k 16,17n %s > %s' %(temp_path + '/Isoforms.filtered.clean.psl',temp_path + '/Isoforms.sorted.psl'))
+        print('\tgrouping isoforms and assigning them to genes (if annotation is provided)')
+        os.system(
+            'python3 %s/groupIsoforms.py -i %s -o %s -g %s'
+                  % (MandoPath,
+                     temp_path + '/Isoforms.sorted.psl',
+                     temp_path + '/Isoforms.filtered.clean.genes',
+                     genome_annotation
+            )
+        )
+        os.system('scp ' + temp_path + '/Isoforms.filtered.* ' + path)
+    else:
+        print('\tone or more input files missing or empty. Isoforms not filtered')
+
 if 'Q' in Modules:
     print('\n---------------------------------------\
            \n    Module Q - quantifying isoforms\
@@ -291,3 +360,4 @@ if 'Q' in Modules:
         % (MandoPath,temp_path, fasta_files)
     )
     os.system('scp ' + temp_path + '/Isoforms.filtered.clean.quant ' + path)
+    os.system('scp ' + temp_path + '/Isoforms.filtered.clean.tpm ' + path)

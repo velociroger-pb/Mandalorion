@@ -9,7 +9,91 @@ import os
 import numpy as np
 import mappy as mp
 import pyabpoa as poa
+import gzip
 poa_aligner = poa.msa_aligner()
+
+
+
+def clean_psl(psl_file, clean_psl_file,primary):
+
+    minimum_intron_size=20
+
+    used=set()
+    out = open(clean_psl_file, 'w')
+    for line in open(psl_file):
+        a = line.strip().split('\t')
+        start = int(a[15])
+        blocksizes = a[18].split(',')[:-1]
+        blockstarts = a[20].split(',')[:-1]
+
+        name=a[9]
+        if primary and name in used:
+            continue
+
+        blockstarts_clean = []
+        readstarts_clean = []
+        blocksizes_clean = []
+        size_gap = []
+
+        for x in range(len(blocksizes)):
+            blockstart = int(blockstarts[x])
+            blocksize = int(blocksizes[x])
+            blockend = blockstart + blocksize
+            size_gap.append(blocksize)
+
+            try:
+                next_blockstart = int(blockstarts[x + 1])
+                gap = next_blockstart - blockend
+                size_gap.append(gap)
+            except IndexError:
+                pass
+
+        new_size_gap = []
+        block = 0
+        for index in range(len(size_gap)):
+            if index % 2 == 0:
+                block += size_gap[index]
+            if index % 2 == 1:
+                if size_gap[index] < minimum_intron_size:
+                    block += size_gap[index]
+                else:
+                    new_size_gap.append(block)
+                    new_size_gap.append(size_gap[index])
+                    block = 0
+
+        new_size_gap.append(block)
+
+        current_position = start
+        current_readposition = int(a[11])
+        for index in range(0, len(new_size_gap), 1):
+            inter = new_size_gap[index]
+            if index % 2 == 0:
+                blockstarts_clean.append(str(current_position))
+                blocksizes_clean.append(str(inter))
+                readstarts_clean.append(str(current_readposition))
+
+                current_position += inter
+                current_readposition += inter
+
+            if index % 2 == 1:
+                current_position += inter
+
+        a[17] = str(len(blockstarts_clean))
+
+        blockstarts_clean.append('')
+        blocksizes_clean.append('')
+        readstarts_clean.append('')
+
+        a[18] = (',').join(blocksizes_clean)
+        a[19] = (',').join(readstarts_clean)
+        a[20] = (',').join(blockstarts_clean)
+
+
+
+        new_line = ('\t').join(a)
+        out.write(new_line + '\n')
+        used.add(name)
+
 
 
 def get_parsed_files(out_tmp,chrom_list):
@@ -36,7 +120,6 @@ def readSAM(inFile,target_chrom):
     not_aligned=[]
     readAccuracy={}
     CigarDict={}
-
     for line in open(inFile):
         if line.startswith('@'):
             continue
@@ -265,7 +348,6 @@ def find_peaks(density_dict, reverse, cutoff, histo_cov, side, peak_areas, chrom
 
 
 def collect_reads(reads, target_chrom,readAccuracy):
-
     histo_cov, histo_left_bases, histo_right_bases = {}, {}, {}
     histo_cov[target_chrom] = {}
     histo_left_bases[target_chrom] = {}
@@ -323,7 +405,13 @@ def parse_genome(input_file, left_bounds, right_bounds, white_list_polyA):
     polyAWhiteList=[]
     chrom_list = set()
     gene_dict = {}
-    for line in open(input_file):
+    if input_file.endswith('.gtf.gz'):
+        print('\t\tgtf file ends on .gz and will be treated as gzipped')
+        input=gzip.open(input_file,'rt')
+    elif input_file.endswith('.gtf'):
+        input=open(input_file,'r')
+
+    for line in input:
         pAwl=False
         for element in white_list_polyA:
             if element in line:
@@ -429,6 +517,7 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
     previous_start=0
     previous_end=0
     roots=set()
+    total_psl=0
     print('\t\tparsing psl and splitting into loci')
     for line in open(infile):
         a=line.strip().split('\t')
@@ -436,17 +525,16 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
         chrom_list.add(chrom)
         start=int(a[15])
         end=int(a[16])
-        if chrom!=previous_chrom:
+        if chrom!=previous_chrom or start>previous_end:
             new=True
+
+        if not new:
+            previous_end=max(end,previous_end)
+            reads.append(line)
         else:
-            if start>previous_end:
-                new=True
-            else:
-                previous_end=max(end,previous_end)
-                reads.append(line)
-        if new:
             if reads:
                 root=previous_chrom+'~'+str(previous_start)+'~'+str(previous_end)
+                print('\t\tdefining locus',(' ').join(root.split('~')),' '*20,end='\r')
                 fh=open(out_tmp+'/'+root+'.sam', 'w')
                 fh.close()
                 fh=open(out_tmp+'/'+root+'.fasta', 'w')
@@ -454,12 +542,14 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
                 fh=open(out_tmp+'/'+root+'.psl', 'w')
                 roots.add(root)
 
-                for line in reads:
-                    fh.write(line)
-                    name=line.strip().split('\t')[9]
+                for read in reads:
+                    fh.write(read)
+                    total_psl+=1
+                    name=read.strip().split('\t')[9]
                     outDict[name]=root
                 fh.close()
                 reads=[]
+            reads.append(line)   ### bug in v4.0.0. Left the first read in each locus unused
             previous_chrom=chrom
             previous_end=end
             previous_start=start
@@ -473,14 +563,15 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
         fh=open(out_tmp+'/'+root+'.psl', 'w')
         roots.add(root)
         for line in reads:
+            total_psl+=1
             fh.write(line)
             name=line.strip().split('\t')[9]
             outDict[name]=root
         fh.close()
 
 
-
-    print('\t\tsplitting sam file into loci')
+    print('\t\tsplit', total_psl, 'psl entries into loci',' '*20)
+    print('\t\tsplitting sam file into loci',' '*20)
     used=set()
     for line in open(samfile):
         if line[0]=='@':
@@ -495,7 +586,7 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
                 fh.close()
             used.add(name)
 
-    print('\t\tsplitting fasta file into loci')
+    print('\t\tsplitting fasta file into loci',' '*20)
     for fastaFile in fastaList:
         for name,seq,q in mp.fastx_read(fastaFile):
             if name in outDict:
