@@ -5,17 +5,19 @@ cwd=$(pwd)
 
 # Resolve dependencies
 
-echo 'Pip installables (scipy, numpy, pyabpoa, mappy, Cython, tqdm)'
-python3 -m pip install --user --upgrade numpy pyabpoa==1.4.0 mappy Cython
-
-echo "emtrey"
-git clone https://github.com/rvolden/emtrey.git
-cd emtrey && make
-cd $cwd
+echo 'Pip installables (scipy, numpy, mappy, Cython)'
+python3 -m pip install --user --upgrade numpy mappy Cython
 
 echo "minimap2"
 git clone https://github.com/lh3/minimap2
 cd minimap2 && make
 cd $cwd
+
+echo 'abpoa'
+wget https://github.com/yangao07/abPOA/releases/download/v1.4.1/abPOA-v1.4.1.tar.gz
+tar -zxvf abPOA-v1.4.1.tar.gz
+cd abPOA-v1.4.1; make
+cd $cwd
+rm abPOA-v1.4.1.tar.gz
 
 echo 'Done'
