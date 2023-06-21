@@ -3,7 +3,7 @@
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
 
-v4.1.0: Could I, perhaps, hold the isoform? Please?
+v4.2.0 - Isoforms are a pathway to many abilities some consider to be unnatural.
 
 Takes R2C2/C3POa and/or PacBio/ccs/lima data and defines high confidence isoform consensus sequences and alignments.
 You can mix and match R2C2/PacBio reads and fasta/fastq files (quality scores are ignored).
@@ -59,29 +59,29 @@ git clone https://github.com/christopher-vollmers/Mandalorion.git
 
 ## Dependencies ##
 
-Make sure a C++ and GO ([go](https://golang.org/dl/)) compiler installed, then run the following to install all dependencies for Mandalorion
+Make sure a C++ compiler installed, then run the following to install all dependencies for Mandalorion
 
 ```bash
 cd Mandalorion
+chmod +x setup.sh
 sh setup.sh
 ```
 
 The command installs local copies of
 
 - [minimap2](https://github.com/lh3/minimap2)
-- [emtrey](https://github.com/rvolden/emtrey) ([go](https://golang.org/dl/))
+- [abpoa](https://github.com/yangao07/abPOA)
 
 as well as use pip install to install the correct versions of
 
 - [mappy](https://pypi.org/project/mappy/)
-- [pyabPOA](https://pypi.org/project/pyabpoa/)
 
-This version was tested with v1.4.0 of pyabpoa.
+This version was tested with v1.4.1 of abpoa.
 
 
 ## PolyA tail removal ##
 
-It is best to run Mandalorion with reads that have no adapter sequences (trimmed), no polyA tails, and in 5'->3' orientation. By default, C3POa (v2.3.0) does trimm reads but doesn't do polyA removal and, depending on the adapters used, may not put reads in 5'->3' orientation..   
+It is best to run Mandalorion with reads that have no adapter sequences (trimmed), no polyA tails, and are in 5'->3' orientation. By default, C3POa (v3) does trim reads but doesn't do polyA removal and, depending on the adapters used, may not put reads in 5'->3' orientation..   
 Therefore the removePolyA.py script in utils/ should be used to get both PacBio (depending on preprocessing) and R2C2 reads ready.
 The script first removes a fixed number of bases (can't be zero) from the ends of the read and then removes the polyA tail on the 3' end of the read. Depending on the polyA position it will also reorient the read in 5'->3' direction.
 
@@ -216,5 +216,5 @@ These are the scripts used to do haplotype phasing and HLA analysis as well as p
 
 ## Notes ##
 
-- This version is a major rework. Things might go wrong. Please let me know if they do. 
-- The -j flag now allows you to define splice site context for unannotated splice sites
+- This version (v4.2) should be a bit faster and does less file generation in the background.
+- No uses abpoa instead of pyabpoa which makes it more robust when dealing with longer isoforms.
