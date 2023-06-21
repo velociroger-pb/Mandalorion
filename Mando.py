@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(PATH))
 import SpliceDefineConsensus
 
 
-VERSION = "v4.1.0 - Could I, perhaps, hold the isoform? Please?"
+VERSION = "v4.2.0 - Isoforms are a pathway to many abilities some consider to be unnatural."
 
 parser = argparse.ArgumentParser(usage='\n\nRunning with default parameters:\n\npython3 Mando.py -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads_noAdapters_noPolyA_5->3.fofn\n')
 
@@ -66,8 +66,8 @@ parser.add_argument(
             min5prime,max5prime,min3prime,max3prime (default 0,40,0,40)'''
 )
 parser.add_argument(
-    '-t', '--minimap2_threads', type=str, default='4',
-    help='Number of threads to use when running minimap and consensus calling (default 4)'
+    '-t', '--minimap2_threads', type=str, default='8',
+    help='Number of threads to use when running minimap and consensus calling (default 8)'
 )
 
 parser.add_argument(
@@ -156,7 +156,7 @@ junctions=args.junctions
 Modules=args.Modules
 
 MandoPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
-
+abpoa=abpoa=MandoPath+'/abPOA-v1.4.1/bin/abpoa'
 
 if '.fofn' in fasta_files:
     fastaList=[]
@@ -181,7 +181,8 @@ if not os.path.isdir(temp_path):
     os.system('mkdir %s' % temp_path)
 
 minimap2 = MandoPath+'minimap2/minimap2'
-emtrey = MandoPath+'emtrey/emtrey'
+emtrey = MandoPath+'/emtrey.py'
+abpoa=MandoPath+'/abPOA-v1.4.1/bin/abpoa'
 
 print('\n----------------------------------------------------------------\
        \nMandalorion - Isoform identification and quantification\
@@ -245,15 +246,15 @@ if 'P' in Modules:
 
     if input:
         print('\tconverting sam output to psl format')
-        os.system('%s -i %s > %s 2> %s' % (emtrey, sam_file, psl_file, temp_path+'/emtrey_messages.txt'))
+        os.system('python3 %s -i %s -o %s -m -t %s' % (emtrey, sam_file, psl_file,minimap2_threads))
         print('\tcleaning psl file of small Indels')
         SpliceDefineConsensus.clean_psl(psl_file, clean_psl_file,True)
         print('\tsorting clean psl file')
-        os.system('sort -k 14,14 -k 16,17n %s > %s' %(clean_psl_file,clean_sorted_psl_file))
-        print('\treading and splitting psl, sam, and fasta files into loci')
+        os.system('sort -T %s -k 14,14 -k 16,17n %s > %s' %(temp_path,clean_psl_file,clean_sorted_psl_file))
+        print('\treading and splitting psl file into loci')
         os.system('rm -r %s/%s' % (temp_path,'tmp_SS/'))
         os.system('mkdir %s/%s' % (temp_path,'tmp_SS/'))
-        SpliceDefineConsensus.get_chromosomes(clean_sorted_psl_file, sam_file, set(),temp_path+'/tmp_SS',fastaList)
+        SpliceDefineConsensus.get_chromosomes(clean_sorted_psl_file,temp_path+'/tmp_SS',fastaList)
     else:
         print('\tno or empty SAM file was provided. File conversions and parsing not performed')
 
@@ -267,9 +268,6 @@ if 'D' in Modules:
     if not os.path.exists(clean_sorted_psl_file) or os.path.getsize(clean_sorted_psl_file)==0:
         print('\tclean sorted psl file missing or empty')
         everything_present=False
-    if not os.path.exists(sam_file) or os.path.getsize(sam_file)==0:
-        print('\tsam file missing or empty')
-        everything_present=False
     for fasta_file in fastaList:
         if not os.path.exists(fasta_file) or os.path.getsize(fasta_file)==0:
             print('\t',fasta_file,'missing or empty')
@@ -277,14 +275,13 @@ if 'D' in Modules:
 
     if everything_present:
         os.system(
-            'python3 %s/defineIsoforms.py -i %s -p %s -c %s -g %s -s %s -w %s -m %s -W %s -n %s -j %s -u %s -d %s -f %s'
+            'python3 %s/defineIsoforms.py -i %s -p %s -c %s -g %s -w %s -m %s -W %s -n %s -j %s -u %s -d %s -a %s'
             % (
                 MandoPath,
                 clean_sorted_psl_file,
                 temp_path,
                 '0.1',
                 genome_annotation,
-                sam_file,
                 window,
                 feature_count,
                 white_list_polyA,
@@ -292,7 +289,7 @@ if 'D' in Modules:
                 junctions,
                 upstream_buffer,
                 downstream_buffer,
-                fasta_files
+                abpoa
             )
         )
     else:
@@ -337,7 +334,7 @@ if 'F' in Modules:
             )
         )
 
-        os.system('sort -k 14,14 -k 16,17n %s > %s' %(temp_path + '/Isoforms.filtered.clean.psl',temp_path + '/Isoforms.sorted.psl'))
+        os.system('sort -T %s -k 14,14 -k 16,17n %s > %s' %(temp_path, temp_path + '/Isoforms.filtered.clean.psl',temp_path + '/Isoforms.sorted.psl'))
         print('\tgrouping isoforms and assigning them to genes (if annotation is provided)')
         os.system(
             'python3 %s/groupIsoforms.py -i %s -o %s -g %s'
