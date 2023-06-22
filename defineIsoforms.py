@@ -23,8 +23,6 @@ parser.add_argument('--infile', '-i', type=str, action='store')
 parser.add_argument('--path', '-p', type=str, action='store')
 parser.add_argument('--cutoff', '-c', type=float, action='store')
 parser.add_argument('--genome_file', '-g', type=str, action='store')
-parser.add_argument('--sam_file', '-s', type=str, action='store')
-parser.add_argument('--fasta_files', '-f', type=str, action='store')
 parser.add_argument('--splice_site_width', '-w', type=int, action='store')
 parser.add_argument('--minimum_read_count', '-m', type=int, action='store')
 parser.add_argument('--white_list_polyA', '-W', type=str, action='store')
@@ -32,7 +30,7 @@ parser.add_argument('--numThreads', '-n', type=str, action='store')
 parser.add_argument('--junctions', '-j', type=str, action='store')
 parser.add_argument('--upstream_buffer', '-u', type=str, action='store')
 parser.add_argument('--downstream_buffer', '-d', type=str, action='store')
-
+parser.add_argument('--abpoa', '-a', type=str, action='store')
 
 
 
@@ -44,7 +42,6 @@ infile = args.infile
 out_path = args.path + '/'  # path where you want your output files to go
 cutoff = float(args.cutoff)
 genome_file = args.genome_file
-sam_file = args.sam_file
 splice_site_width = int(args.splice_site_width)
 minimum_read_count = int(args.minimum_read_count)
 white_list_polyA=args.white_list_polyA.split(',')
@@ -52,22 +49,14 @@ threads=int(args.numThreads)
 junctions=args.junctions.split(',')
 upstream_buffer=int(args.upstream_buffer)
 downstream_buffer=int(args.downstream_buffer)
-fasta_files=args.fasta_files
-
-if '.fofn' in fasta_files:
-    fastaList=[]
-    for line in open(fasta_files):
-        fasta=line.strip()
-        fastaList.append(fasta)
-else:
-    fastaList=fasta_files.split(',')
+abpoa = args.abpoa
 
 
-def process_locus(infile,sam_file,fasta_file,chrom,left_bounds_chrom, right_bounds_chrom,start,end,splice_site_width,minimum_read_count,junctions,cutoff):
+def process_locus(out_tmp,root,chrom,left_bounds_chrom, right_bounds_chrom,start,end,splice_site_width,minimum_read_count,junctions,cutoff,abpoa):
     print('\t\tprocessing locus %s %s %s' % (chrom,start,end)+' '*20, end='\r')
+    infile=out_tmp+'/'+root+'.psl'
     peak_areas={}
-    readAccuracy,CigarDict  = SpliceDefineConsensus.readSAM(sam_file,chrom)
-    histo_left_bases, histo_right_bases, histo_cov = SpliceDefineConsensus.collect_reads(infile, chrom, readAccuracy)
+    histo_left_bases, histo_right_bases, histo_cov,csDict = SpliceDefineConsensus.collect_reads(infile, chrom)
 
     peak_areas[chrom] = {}
     peak_areas[chrom]['l'] = {}
@@ -76,8 +65,8 @@ def process_locus(infile,sam_file,fasta_file,chrom,left_bounds_chrom, right_boun
     peak_areas, toWrite_A_l = SpliceDefineConsensus.make_genome_bins(left_bounds_chrom, 'l', chrom, peak_areas,splice_site_width)
     peak_areas, toWrite_A_r = SpliceDefineConsensus.make_genome_bins(right_bounds_chrom, 'r', chrom, peak_areas,splice_site_width)
 
-    peak_areas, toWrite_N_l = SpliceDefineConsensus.find_peaks(histo_left_bases[chrom], True, cutoff, histo_cov, 'l', peak_areas, chrom,CigarDict,start,end,splice_site_width,minimum_read_count,junctions)
-    peak_areas, toWrite_N_r = SpliceDefineConsensus.find_peaks(histo_right_bases[chrom], False, cutoff, histo_cov, 'r', peak_areas, chrom, CigarDict,start,end,splice_site_width,minimum_read_count,junctions)
+    peak_areas, toWrite_N_l = SpliceDefineConsensus.find_peaks(histo_left_bases[chrom], True, cutoff, histo_cov, 'l', peak_areas, chrom,csDict,start,end,splice_site_width,minimum_read_count,junctions)
+    peak_areas, toWrite_N_r = SpliceDefineConsensus.find_peaks(histo_right_bases[chrom], False, cutoff, histo_cov, 'r', peak_areas, chrom,csDict,start,end,splice_site_width,minimum_read_count,junctions)
 
     peakCounter={}
     peakCounter['l']=0
@@ -93,12 +82,11 @@ def process_locus(infile,sam_file,fasta_file,chrom,left_bounds_chrom, right_boun
             for base in np.arange(splice_left, splice_right + 1):
                 spliceDict[chrom][base] = type1 + side + peaks
 
-    start_end_dict, start_end_dict_mono = SpliceDefineConsensus.sort_reads_into_splice_junctions(spliceDict, fasta_file, infile)
+    start_end_dict, start_end_dict_mono = SpliceDefineConsensus.sort_reads_into_splice_junctions(spliceDict, infile)
     seqDict=SpliceDefineConsensus.define_start_end_sites(start_end_dict, start_end_dict_mono,upstream_buffer,downstream_buffer,minimum_read_count)
-
     IsoData={}
     for isoform,reads in seqDict.items():
-        consensus,names=SpliceDefineConsensus.determine_consensus(reads)
+        consensus,names=SpliceDefineConsensus.determine_consensus(reads,out_tmp+'/'+root,abpoa)
         IsoData[isoform]=[consensus,names]
     return IsoData
 
@@ -160,11 +148,12 @@ def main():
             for pos in right_bounds[chrom][side]:
                 if start<pos<end:
                      right_bounds_sub[chrom][side].append(pos)
-        results[root]=pool.apply_async(process_locus,[out_tmp+'/'+root+'.psl',out_tmp+'/'+root+'.sam',out_tmp+'/'+root+'.fasta',chrom,left_bounds_sub[chrom], right_bounds_sub[chrom],start,end,splice_site_width,minimum_read_count,junctions,cutoff])
+        results[root]=pool.apply_async(process_locus,[out_tmp,root,chrom,left_bounds_sub[chrom], right_bounds_sub[chrom],start,end,splice_site_width,minimum_read_count,junctions,cutoff,abpoa])
     pool.close()
     pool.join()
 
     counter=0
+    print('\twriting isoform sequences to file')
     for root in roots:
         chrom,start,end=root.split('~')
         IsoData = results[root].get()
