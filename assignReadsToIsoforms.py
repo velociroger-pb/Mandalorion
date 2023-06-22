@@ -14,7 +14,7 @@ mandalorion_folder=args.mandalorion_output_folder
 fasta_files=args.fasta_files
 filtered_isoforms=mandalorion_folder+'/Isoforms.filtered.clean.psl'
 r2i=mandalorion_folder+'/reads2isoforms.txt'
-outq=open(mandalorion_folder+'/Isoforms.filtered.clean.counts','w')
+outq=open(mandalorion_folder+'/Isoforms.filtered.clean.quant','w')
 outtpm=open(mandalorion_folder+'/Isoforms.filtered.clean.tpm','w')
 
 def read_fasta(inFile):

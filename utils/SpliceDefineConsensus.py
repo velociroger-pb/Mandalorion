@@ -16,7 +16,7 @@ poa_aligner = poa.msa_aligner()
 
 def clean_psl(psl_file, clean_psl_file,primary):
 
-    minimum_intron_size=20
+    minimum_intron_size=10
 
     used=set()
     out = open(clean_psl_file, 'w')
@@ -100,88 +100,19 @@ def get_parsed_files(out_tmp,chrom_list):
     roots=set()
     for file1 in os.listdir(out_tmp):
         if os.path.isfile(out_tmp+'/'+file1):
-            if '.fasta' in file1:
-                root=file1.split('.fasta')[0]
+            if '.psl' in file1:
+                root=file1.split('.psl')[0]
                 chrom,start,end = root.split('~')
                 chrom_list.add(chrom)
                 roots.add(root)
     return chrom_list,roots
 
-def readSAM(inFile,target_chrom):
-    '''
-    Reads the sam file, parses MD and CIGAR strings, and prints the read
-    name, percent identity, number of matches, number of mismatches,
-    and the number of indels.
-    '''
-    used = set()
-    identities=[]
-    lengths=[]
-    readLengths=[]
-    not_aligned=[]
-    readAccuracy={}
-    CigarDict={}
-    for line in open(inFile):
-        if line.startswith('@'):
-            continue
-        line = line.rstrip().split('\t')
-        chromosome=line[2]
-        if chromosome==target_chrom:
-            name = line[0]
-            readLength=len(line[9])
-            chromosome=line[2]
-            if line[1] == '4': # unaligned
-                not_aligned.append(readLength)
-            if line[1] == '4' or name in used: # unaligned
-                continue
-            readDirection=line[1]
-            coverage=1
-            if coverage:
-                used.add(name)
-                for column in line:
-                    if column.startswith('NM:i:'):
-                        NM = int(column[5:])
-                    if column.startswith('nn:i:'):
-                        ambig = int(column[5:])
-                    if column.startswith('cs:Z:'):
-                        CS=column[5:]
-                CIGAR=CS+','+line[3]+','+line[5]+','+name
-                denominator, M, indel = parseCIGAR(line[5])
-                CigarDict[name]=CIGAR
-                mismatch = NM - indel - ambig
-                matches = M - mismatch
-                identity = matches / denominator
-
-                Length=round(M,-2)
-                if name not in readAccuracy:
-                    readAccuracy[name]=identity
-    return readAccuracy,CigarDict
-
-def parseCIGAR(cstr):
+def getCSaroundSS(CS,genomePosition,start,end):
     '''
     Goes through the CIGAR string by pairing numbers with the letters.
     Counts the number of matches/mismatches and indels.
     Returns the total number of all, matches/mismatches (M), and indels.
     '''
-    p = re.compile(r'([MIDNSHP=X])')
-    splitCstr = [i+j for i,j in zip(p.split(cstr)[::2], p.split(cstr)[1::2])]
-    total, M, indel = 0, 0, 0
-    for i in range(len(splitCstr)):
-        if splitCstr[i][-1] in 'MID':
-            total += int(splitCstr[i][:-1])
-        if splitCstr[i][-1] == 'M':
-            M += int(splitCstr[i][:-1])
-        if splitCstr[i][-1] in 'ID':
-            indel += int(splitCstr[i][:-1])
-    return total, M, indel
-
-def getCSaroundSS(string,start,end):
-    '''
-    Goes through the CIGAR string by pairing numbers with the letters.
-    Counts the number of matches/mismatches and indels.
-    Returns the total number of all, matches/mismatches (M), and indels.
-    '''
-    CS,genomePosition, cstr, name = string.split(',')
-    genomePosition=int(genomePosition)-1
 
     status=''
     p = re.compile(r'([\\=\\+\-\\*\\~])')
@@ -301,7 +232,7 @@ def myround(x, base=10):
     return int(base * round(float(x) / base))
 
 
-def find_peaks(density_dict, reverse, cutoff, histo_cov, side, peak_areas, chrom, CigarDict,start,end,splice_site_width,minimum_read_count,junctions):
+def find_peaks(density_dict, reverse, cutoff, histo_cov, side, peak_areas, chrom, csDict,start,end,splice_site_width,minimum_read_count,junctions):
     dist_range=[0]
     toWrite=[]
     for shift in range(1,splice_site_width+1):
@@ -333,7 +264,7 @@ def find_peaks(density_dict, reverse, cutoff, histo_cov, side, peak_areas, chrom
 
                 if not Type:
                     continue
-                passed = characterize_splicing_event([chrom, peak_center - splice_site_width, peak_center + splice_site_width], best_names, CigarDict,junctions)
+                passed = characterize_splicing_event([chrom, peak_center - splice_site_width, peak_center + splice_site_width], best_names, csDict,junctions)
                 if passed:
 
                     start=str(peak_center - splice_site_width)
@@ -347,12 +278,12 @@ def find_peaks(density_dict, reverse, cutoff, histo_cov, side, peak_areas, chrom
     return peak_areas, toWrite
 
 
-def collect_reads(reads, target_chrom,readAccuracy):
+def collect_reads(reads, target_chrom):
     histo_cov, histo_left_bases, histo_right_bases = {}, {}, {}
     histo_cov[target_chrom] = {}
     histo_left_bases[target_chrom] = {}
     histo_right_bases[target_chrom] = {}
-
+    csDict={}
     for line in open(reads):
         a = line.strip().split('\t')
         chrom = a[13]
@@ -363,10 +294,12 @@ def collect_reads(reads, target_chrom,readAccuracy):
             begin, span = int(a[15]), int(a[16])
             blocksizes = a[18].split(',')[:-1]
             blockstarts = a[20].split(',')[:-1]
+            accuracy = float(a[21])
+            cs=a[22]
+            csDict[name]=(cs,begin)
             cov_set = set()
             low_bounds, up_bounds = [], []
             aligned_bases = 0
-            accuracy=readAccuracy[name]
             for x in range(0, len(blocksizes)):
                 blockstart = int(blockstarts[x])
                 blocksize = int(blocksizes[x])
@@ -398,7 +331,7 @@ def collect_reads(reads, target_chrom,readAccuracy):
                 if up_bound not in histo_right_bases[chrom]:
                     histo_right_bases[chrom][up_bound] = []
                 histo_right_bases[chrom][up_bound].append([name, begin, span, cov_set, dirn,accuracy,round(aligned_bases,-2)])
-    return histo_left_bases, histo_right_bases, histo_cov
+    return histo_left_bases, histo_right_bases, histo_cov,csDict
 
 
 def parse_genome(input_file, left_bounds, right_bounds, white_list_polyA):
@@ -509,7 +442,8 @@ def make_genome_bins(bounds, side, chrom, peak_areas,splice_site_width):
 
 
 
-def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
+def get_chromosomes(infile,out_tmp,fastaList):
+    chrom_list=set()
     outDict={}
     reads=[]
     new=False
@@ -535,10 +469,6 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
             if reads:
                 root=previous_chrom+'~'+str(previous_start)+'~'+str(previous_end)
                 print('\t\tdefining locus',(' ').join(root.split('~')),' '*20,end='\r')
-                fh=open(out_tmp+'/'+root+'.sam', 'w')
-                fh.close()
-                fh=open(out_tmp+'/'+root+'.fasta', 'w')
-                fh.close()
                 fh=open(out_tmp+'/'+root+'.psl', 'w')
                 roots.add(root)
 
@@ -556,10 +486,6 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
             new=False
     if reads:
         root=previous_chrom+'~'+str(previous_start)+'~'+str(previous_end)
-        fh=open(out_tmp+'/'+root+'.sam', 'w')
-        fh.close()
-        fh=open(out_tmp+'/'+root+'.fasta', 'w')
-        fh.close()
         fh=open(out_tmp+'/'+root+'.psl', 'w')
         roots.add(root)
         for line in reads:
@@ -569,46 +495,21 @@ def get_chromosomes(infile,samfile,chrom_list,out_tmp,fastaList):
             outDict[name]=root
         fh.close()
 
-
     print('\t\tsplit', total_psl, 'psl entries into loci',' '*20)
-    print('\t\tsplitting sam file into loci',' '*20)
-    used=set()
-    for line in open(samfile):
-        if line[0]=='@':
-            continue
-        a=line.strip().split('\t')
-        name=a[0]
-        if name not in used:
-            if name in outDict:
-                root=outDict[name]
-                fh=open(out_tmp+'/'+root+'.sam', 'a')
-                fh.write(line)
-                fh.close()
-            used.add(name)
-
-    print('\t\tsplitting fasta file into loci',' '*20)
-    for fastaFile in fastaList:
-        for name,seq,q in mp.fastx_read(fastaFile):
-            if name in outDict:
-                root=outDict[name]
-                fh=open(out_tmp+'/'+root+'.fasta', 'a')
-                fh.write('>%s\n%s\n' % (name,seq))
-                fh.close()
 
 
 
-def characterize_splicing_event(a,names,CigarDict,junctions):
+def characterize_splicing_event(a,names,csDict,junctions):
     passed = False
     chromosome = a[0]
     splice_left = int(a[1])
     splice_right = int(a[2])
-    readDict = []
-    CIGARs=[]
+    CSs=[]
     indeces = np.random.choice(np.arange(0, len(names)),
                                    min(len(names), 500), replace=False)
     for index in indeces:
         name = names[index]
-        CIGARs.append(CigarDict[name])
+        CSs.append(csDict[name])
     basecontext={}
     basecontext['allowed']=0
     basecontext['all']=0
@@ -619,8 +520,8 @@ def characterize_splicing_event(a,names,CigarDict,junctions):
     for status in ['*','+','-','=','|']:
         leftCS[status]=0
         rightCS[status]=0
-    for CIGAR in CIGARs:
-        bases,left,right = getCSaroundSS(CIGAR,splice_left,splice_right)
+    for cs,genomePosition in CSs:
+        bases,left,right = getCSaroundSS(cs,genomePosition,splice_left,splice_right)
         basecontext['all'] += 1
 #        if bases == 'gtag' or bases == 'ctac':
         if bases in junctions:
@@ -813,11 +714,8 @@ def find_ends(starts, ends, identity, count_dict, upstream_buffer,downstream_buf
     return start_peaks, end_peaks, count_dict
 
 
-def sort_reads_into_splice_junctions(splice_dict, fasta_file, infile):
-    start_end_dict, start_end_dict_mono, readDict = {}, {}, {}
-    for name,seq,q in mp.fastx_read(fasta_file):
-        readDict[name] = [name, seq]
-
+def sort_reads_into_splice_junctions(splice_dict, infile):
+    start_end_dict, start_end_dict_mono = {}, {}
     for line in open(infile):
         a = line.strip().split('\t')
         read_chromosome, read_direction = a[13], a[8]
@@ -835,7 +733,8 @@ def sort_reads_into_splice_junctions(splice_dict, fasta_file, infile):
 
         blocksizes = a[18].split(',')[:-1]
         blockstarts = a[20].split(',')[:-1]
-
+        sequence=a[23]
+        read=(name,sequence)
         for x in range(0, len(blocksizes) - 1):
             blockstart = int(blockstarts[x])
             blocksize = int(blocksizes[x])
@@ -857,7 +756,7 @@ def sort_reads_into_splice_junctions(splice_dict, fasta_file, infile):
                 if identity not in start_end_dict:
                     start_end_dict[identity] = []
                 start_end_dict[identity].append((start, end,
-                                                 readDict[name],
+                                                 read,
                                                  left_extra,
                                                  right_extra,
                                                  read_direction))
@@ -866,7 +765,7 @@ def sort_reads_into_splice_junctions(splice_dict, fasta_file, infile):
                     start_end_dict_mono[identity] = []
 
                 start_end_dict_mono[identity].append((start, end,
-                                                      readDict[name],
+                                                      read,
                                                       left_extra,
                                                       right_extra,
                                                       read_direction))
@@ -977,16 +876,13 @@ def revComp(seq):
     return ''.join([bases[x] for x in list(seq)])[::-1]
 
 
-def determine_consensus(reads):
+def determine_consensus(reads,root,abpoa):
     '''Aligns and returns the consensus'''
-    corrected_consensus = ''
-    repeats = '0'
     fasta_reads = []
     names=[]
     for read, seq in reads:
         fasta_reads.append((read, seq))
         names.append(read)
-    repeats = str(len(fasta_reads))
 
     indeces = np.random.choice(np.arange(0, len(fasta_reads)),
                                    min(len(fasta_reads), 100), replace=False)
@@ -996,27 +892,44 @@ def determine_consensus(reads):
     first = subsample_fasta_reads[0][1]
     sequences=[]
     seq_lengths=[]
+
+
+
     mm_align = mp.Aligner(seq=first, preset='map-ont')
+
+    tmp_sequences=root+'.fasta'
+    tmp_consensus=root+'.consensus.fasta'
+    tmp_sequences_fh=open(tmp_sequences,'w')
     for read,sequence in subsample_fasta_reads:
         seq_lengths.append(len(sequence))
         for hit in mm_align.map(sequence):
              if hit.is_primary:
-                 if hit.strand==1:
-                     sequences.append(sequence)
-                 elif hit.strand==-1:
-                     sequences.append(mp.revcomp(sequence))
+                 if hit.strand==-1:
+                     sequence=mp.revcomp(sequence)
+                 tmp_sequences_fh.write(f'>{read}\n{sequence}\n')
+                 sequences.append(sequence)
 
-    if np.median(seq_lengths)>20000:
-#        consensus_sequence=split_consensus(sequences)
-        consensus_sequence = sequences[0]
+    tmp_sequences_fh.close()
+
+    if len(sequences)<=2:
+         consensus_sequence = sequences[0]
+
     else:
-        res = poa_aligner.msa(sequences, out_cons=True, out_msa=False)
-        if len(sequences)<=2:
-            consensus_sequence = sequences[0]
-        elif not res.cons_seq:
-            consensus_sequence = sequences[0]
+        insert_length=np.median(seq_lengths)
+        if insert_length<8000:
+            os.system(f'{abpoa} -M 5 -r 0 {tmp_sequences} > {tmp_consensus} 2> apboa.messages')
         else:
-            consensus_sequence = res.cons_seq[0]
+            os.system(f'{abpoa} -M 5 -r 0 -S {tmp_sequences} > {tmp_consensus} 2> apboa.messages')
+
+        consensus_sequence=''
+        for consName,consSeq,consQ in mp.fastx_read(f'{tmp_consensus}'):
+            consensus_sequence=consSeq
+        if not consensus_sequence:
+            consensus_sequence = sequences[0]
+
+        os.system(f'rm {tmp_consensus}')
+    os.system(f'rm {tmp_sequences}')
+
     res, mm_align, sequences = 0, 0, 0
     return consensus_sequence,names
 
