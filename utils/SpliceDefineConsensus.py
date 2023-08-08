@@ -8,10 +8,7 @@ import re
 import os
 import numpy as np
 import mappy as mp
-import pyabpoa as poa
 import gzip
-poa_aligner = poa.msa_aligner()
-
 
 
 def clean_psl(psl_file, clean_psl_file,primary):
