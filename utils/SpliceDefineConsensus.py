@@ -8,10 +8,7 @@ import re
 import os
 import numpy as np
 import mappy as mp
-import pyabpoa as poa
 import gzip
-poa_aligner = poa.msa_aligner()
-
 
 
 def clean_psl(psl_file, clean_psl_file,primary):
@@ -917,9 +914,9 @@ def determine_consensus(reads,root,abpoa):
     else:
         insert_length=np.median(seq_lengths)
         if insert_length<8000:
-            os.system(f'{abpoa} -M 5 -r 0 {tmp_sequences} > {tmp_consensus} 2> apboa.messages')
+            os.system(f'{abpoa} -M 5 -r 0 {tmp_sequences} > {tmp_consensus} 2> abpoa.messages')
         else:
-            os.system(f'{abpoa} -M 5 -r 0 -S {tmp_sequences} > {tmp_consensus} 2> apboa.messages')
+            os.system(f'{abpoa} -M 5 -r 0 -S {tmp_sequences} > {tmp_consensus} 2> abpoa.messages')
 
         consensus_sequence=''
         for consName,consSeq,consQ in mp.fastx_read(f'{tmp_consensus}'):
