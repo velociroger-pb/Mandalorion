@@ -41,6 +41,8 @@ def argParser():
     parser.add_argument('-I', '--minimum_isoform_length', type=str)
     parser.add_argument('-M', '--multi_exon_only', type=str)
     parser.add_argument('-m', '--mandopath', type=str)
+    parser.add_argument('--mm2_path', default=None, type=str, help=argparse.SUPPRESS)
+    parser.add_argument('--emtrey_path', default=None, type=str, help=argparse.SUPPRESS)
 
     return vars(parser.parse_args())
 
@@ -62,7 +64,8 @@ downstream_buffer = int(args['downstream_buffer'])
 multi_exon_only = int(args['multi_exon_only'])
 MandoPath=args['mandopath']
 
-minimap2, emtrey = 'minimap2', 'emtrey'
+minimap2 = args['mm2_path']
+emtrey = args['emtrey_path']
 
 out2 = open(path + '/Isoforms.filtered.fasta', 'w')
 out3 = open(path + '/Isoforms.filtered.clean.psl', 'w')
@@ -484,7 +487,7 @@ def main(infile):
     clean_psl_file = path + '/Isoforms.aligned.out.clean.psl'
     os.system('%s -G 400k -uf --secondary=no -ax splice:hq -t %s %s %s > %s ' % (minimap2, minimap2_threads, genome, processed_isoforms, sam_file))
     filter_sam(sam_file,filtered_sam_file)
-    os.system('%s -i %s > %s ' % (emtrey, filtered_sam_file, psl_file))
+    os.system('python3 %s -i %s -o %s ' % (emtrey, filtered_sam_file, psl_file))
     clean_psl(psl_file, clean_psl_file,False)
     print('\tcollecting chromosomes')
     chromosomes = collect_chromosomes(clean_psl_file)
