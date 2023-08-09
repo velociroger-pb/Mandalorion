@@ -6,6 +6,13 @@ import mappy as mp
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mandalorion_output_folder', type=str)
 parser.add_argument('-f', '--fasta_files', type=str, help='comma separate list of fasta file locations')
+parser.add_argument(
+    "-P",
+    "--pacbio",
+    default=False,
+    action='store_true',
+    help=argparse.SUPPRESS
+)
 
 
 
@@ -16,14 +23,6 @@ filtered_isoforms=mandalorion_folder+'/Isoforms.filtered.clean.psl'
 r2i=mandalorion_folder+'/reads2isoforms.txt'
 outq=open(mandalorion_folder+'/Isoforms.filtered.clean.quant','w')
 outtpm=open(mandalorion_folder+'/Isoforms.filtered.clean.tpm','w')
-
-def read_fasta(inFile):
-    '''Reads in FASTA files, returns a dict of header:sequence'''
-    readDict = {}
-    for name,seq,qual in mp.fastx_read(inFile):
-         readDict[name] = ''
-
-    return readDict
 
 def read_filtered_isoforms(filtered_isoforms,r2i_dict,sampleList,readMapDict,isoformReadCounts,totalReadCounts):
     for line in open(filtered_isoforms):
@@ -53,11 +52,10 @@ def mapReadLocation(fastaList):
     sampleList=[]
     readMapDict={}
     totalReadCounts={}
-    for line in fastaList:
-        location=line.strip()
+    for filename in fastaList:
+        location=filename.strip()
         totalReadCounts[location]=0
         sampleList.append(location)
-        reads=read_fasta(location)
         for name,seq,qual in mp.fastx_read(location):
             readMapDict[name]=location
             totalReadCounts[location]+=1
@@ -96,8 +94,8 @@ if '.fofn' in fasta_files:
 else:
     fastaList=fasta_files.split(',')
 
-
-
+if args.pacbio:
+    fastaList = [mandalorion_folder + '/' + x.replace('.bam', '.fa.gz') for x in fastaList]
 
 print('\t\tmap reads to files')
 sampleList,readMapDict,totalReadCounts=mapReadLocation(fastaList)
